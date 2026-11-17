@@ -926,6 +926,7 @@ export const en: Record<string, string> = {
   '杠铃高度曲线，找到 {length} 次': 'Bar height curve, {length} reps found',
 
   // components/DunkPanel.tsx
+  '还没在真机上和参照读数对过：{names}。先当参考，别只凭这几项换训练块。': 'Not yet checked against a reference on a real phone: {names}. Treat them as a guide, and don’t switch blocks on these alone.',
   '偏慢': 'slow',
   '偏低': 'low',
   '不均衡': 'unbalanced',

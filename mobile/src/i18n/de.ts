@@ -926,6 +926,7 @@ export const de: Record<string, string> = {
   '杠铃高度曲线，找到 {length} 次': 'Kurve der Hantelhöhe, {length} Wdh. erkannt',
 
   // components/DunkPanel.tsx
+  '还没在真机上和参照读数对过：{names}。先当参考，别只凭这几项换训练块。': 'Noch nicht auf einem echten Handy mit einem Referenzwert abgeglichen: {names}. Nur als Anhaltspunkt nehmen und den Block nicht allein deswegen wechseln.',
   '偏慢': 'langsam',
   '偏低': 'niedrig',
   '不均衡': 'unausgeglichen',

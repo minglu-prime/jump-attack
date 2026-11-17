@@ -135,6 +135,17 @@ function Reasons({ d }: { d: DunkDiagnosis }) {
   ));
 }
 
+/**
+ * The caveat for deciding results that only synthetic video backs (domain/validation.ts). They stay on screen and in
+ * the diagnosis; this line says not to switch blocks on them alone until they have been checked against the wall or
+ * another app on a real phone.
+ */
+function Unverified({ d }: { d: DunkDiagnosis }) {
+  if (d.unverified.length === 0) return null;
+  const names = d.unverified.map((k) => (k === 'touch' ? tr('摸高') : d.metrics.find((m) => m.key === k)!.name));
+  return <Text style={styles.reason}>· {tr('还没在真机上和参照读数对过：{names}。先当参考，别只凭这几项换训练块。', { names: names.join(tr('、')) })}</Text>;
+}
+
 function MetricRow({ m, flat }: { m: DunkMetric; flat?: boolean }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={m.name} onPress={() => openDunkTest(m.key)} style={({ pressed }) => [flat ? styles.flatRow : styles.row, pressed && styles.pressed]}>
@@ -170,6 +181,7 @@ export function DunkPanel({ diagnosis: d, standingReach }: { diagnosis: DunkDiag
         <Text style={text.muted}>{tr('当前短板')}</Text>
         <LimiterHead d={d} />
         <Reasons d={d} />
+        <Unverified d={d} />
       </Card>
 
       <Text style={text.section}>{tr('指标')}</Text>
@@ -242,10 +254,11 @@ export function DunkSummary({ diagnosis: d }: { diagnosis: DunkDiagnosis }) {
 
       {open && (
         <View style={styles.more}>
-          {d.reasons.length > 0 && (
+          {(d.reasons.length > 0 || d.unverified.length > 0) && (
             <View style={{ gap: 4 }}>
               <Text style={styles.moreTitle}>{tr('为什么')}</Text>
               <Reasons d={d} />
+              <Unverified d={d} />
             </View>
           )}
           <View>
