@@ -546,6 +546,7 @@ export const de: Record<string, string> = {
   '保存或分享视频': 'Video speichern oder teilen',
   '分享失败：{p}': 'Teilen fehlgeschlagen: {p}',
   '这个项目不能回放': 'Dieser Test kann nicht wiedergegeben werden',
+  '回放链接里的数据不完整，回上一页重新分析。': 'Im Wiedergabe-Link fehlen Daten. Geh zurück und analysiere das Video erneut.',
   '正在导出视频…': 'Video wird exportiert…',
   '再放一次': 'Nochmal abspielen',
   '导出视频': 'Video exportieren',
@@ -1808,6 +1809,7 @@ export const de: Record<string, string> = {
 
   // media/poseLib.ts
   '{name} 下载不完整（{got} / {bytes} 字节）': '{name} wurde nicht vollständig geladen ({got} / {bytes} Bytes)',
+  '{name} 校验不对，已删除，请重新下载。': '{name} ist nicht die veröffentlichte Datei (Prüfsumme stimmt nicht) und wurde gelöscht. Lade sie erneut herunter.',
 
   // media/poseShared.ts
   '读不到 ': 'Nicht ladbar: ',

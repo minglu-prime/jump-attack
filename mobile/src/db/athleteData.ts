@@ -1,7 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { exportBackup } from '@/db/backup';
-import { ATHLETE_FORMAT, isPristine, retargetId, type AthleteFile, type BackupRow } from '@/domain/backup';
+import { columnTypes, exportBackup } from '@/db/backup';
+import { ATHLETE_FORMAT, fitsColumn, isPristine, retargetId, type AthleteFile, type BackupRow } from '@/domain/backup';
 import { tr } from '@/i18n';
 
 import type { Athlete } from './repo';
@@ -101,13 +101,17 @@ export async function importAthlete(db: SQLiteDatabase, file: AthleteFile, opts:
       }
 
       for (const t of tables) {
-        const known = new Set((await db.getAllAsync<{ name: string }>(`PRAGMA table_info("${t.name}")`)).map((c) => c.name));
+        const types = await columnTypes(db, t.name);
         for (const row of file.tables[t.name]) {
           const out: BackupRow = {};
           for (const [c, v] of Object.entries(row)) {
-            if (!known.has(c)) continue;
+            if (!types.has(c)) continue;
+            if (!fitsColumn(types.get(c)!, v)) throw new Error(`${t.name}.${c}: a value of the wrong type`);
             const link = c === t.key ? t.name : t.links.find((l) => l.from === c)?.table;
             const moved = link != null && v != null ? ids.get(link)?.get(v) : undefined;
+            // Every link must lead to a row the file brings: one that named a row already here (by its id, or the id
+            // as text) would hang this row on someone else on the phone, the owner included.
+            if (link != null && v != null && moved === undefined) throw new Error(`${t.name}.${c} points outside the file`);
             out[c] = moved ?? v;
           }
           const cols = Object.keys(out);
