@@ -155,6 +155,16 @@ describe('with results', () => {
     expect(texts(r.root)).not.toContain(reason);
   });
 
+  it('says which deciding results have not been checked on a real phone, on the diagnosis screen and folded on home', async () => {
+    // The squat, drop jump and CMJ ÷ SJ come from video pipelines checked on synthetic clips only; the touch was typed in off the wall.
+    const caveat = '还没在真机上和参照读数对过：深蹲 ÷ 体重、跳深 RSI、跳深触地、CMJ ÷ SJ。先当参考，别只凭这几项换训练块。';
+    expect(texts((await render(<Dunk />)).root)).toContain(caveat);
+    const home = await render(<Home />);
+    expect(texts(home.root)).not.toContain(caveat);
+    await press(home.root, '展开诊断详情');
+    expect(texts(home.root)).toContain(caveat);
+  });
+
   it('puts the drop-jump ladder first in the jump list while reactive strength is the limiter', async () => {
     const r = await render(<JumpTests />);
     const t = texts(r.root);

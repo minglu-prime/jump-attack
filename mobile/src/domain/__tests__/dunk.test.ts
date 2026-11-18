@@ -1,4 +1,5 @@
 import { bestEachDay, dayState, diagnose, dunkLine, reachRuler, tolerance, warmupState, worstState, type DunkInput } from '../dunk';
+import { EVIDENCE } from '../validation';
 import type { DayReadiness } from '../readiness';
 
 const base: DunkInput = { bodyMassKg: 75, standingReachCm: 240, cmj: [], sj: [], approachTouch: [], squat1rm: [], dropJumps: [], fvPct: [] };
@@ -282,5 +283,31 @@ describe('one CMJ per day', () => {
     ];
     expect(bestEachDay(rows)).toEqual([50, 47]);
     expect(bestEachDay([])).toEqual([]);
+  });
+});
+
+describe('numbers not yet checked on a real phone', () => {
+  const strong = { ...base, squat1rm: [130], dropJumps: [{ rsi: 1.8, contactMs: 220 }], cmj: [45], sj: [42] };
+
+  it('lists the measured results that only synthetic video backs, and leaves untested ones out', () => {
+    const d = diagnose({ ...strong, approachTouch: [318], approachMethod: 'wall' });
+    expect(d.unverified).toEqual(['squat_ratio', 'rsi', 'contact', 'eur']);
+  });
+
+  it('trusts a touch read off the wall but not one estimated from video', () => {
+    expect(diagnose({ ...base, approachTouch: [318], approachMethod: 'wall' }).unverified).toEqual([]);
+    expect(diagnose({ ...base, approachTouch: [318], approachMethod: 'video' }).unverified).toEqual(['touch']);
+    expect(diagnose({ ...base, cmj: [45] }).unverified).toEqual(['touch']);
+  });
+
+  it('drops a result from the list once it has been checked on a real phone', () => {
+    const evidence = { ...EVIDENCE, rsi: { evidence: 'real' as const, basis: 'compared with My Jump', report: 'docs/validation/dj.md' } };
+    expect(diagnose({ ...strong, approachTouch: [318], approachMethod: 'wall' }, evidence).unverified).toEqual(['squat_ratio', 'contact', 'eur']);
+  });
+
+  it('leaves the limiter and its reasons as they are: the caveat is shown beside them', () => {
+    const d = diagnose(strong);
+    expect(d.limiter).toBe('reactive');
+    expect(d.reasons[0]).toBe('深蹲是体重的 1.73 倍，力量够了；跳深 RSI 1.80，不到 2.0：练反应。');
   });
 });

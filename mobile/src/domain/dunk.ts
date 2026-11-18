@@ -2,6 +2,7 @@ import { mean } from './assess';
 import { daysBetween, toISODate, type ISODate } from './dates';
 import type { DayReadiness } from './readiness';
 import { lineVerdict, type LineVerdict } from './touch';
+import { EVIDENCE, trusted, type EvidenceEntry, type TouchKey } from './validation';
 
 import { decimal, localized, tr } from '@/i18n';
 
@@ -148,6 +149,11 @@ export type DunkDiagnosis = {
   missing: Missing[];
   /** Results the diagnosis leans on that are older than {@link STALE_DAYS}. */
   stale: Testable[];
+  /**
+   * Measured results backed by synthetic video only (domain/validation.ts), in the order of `metrics`, with `touch`
+   * when the gap is measured from a video estimate. Shown as a caveat; the limiter and reasons are left as they are.
+   */
+  unverified: (DunkMetricKey | 'touch')[];
 };
 
 /**
@@ -219,7 +225,7 @@ function rate(value: number | null, low: number, good: number, lowerIsBetter = f
 
 const fixed = (x: number, d: number) => decimal(x, d);
 
-export function diagnose(input: DunkInput): DunkDiagnosis {
+export function diagnose(input: DunkInput, evidence: Record<DunkMetricKey | TouchKey, EvidenceEntry> = EVIDENCE): DunkDiagnosis {
   const line = dunkLine(input.rimCm, input.clearanceCm);
   const cmj = input.cmj.at(-1) ?? null;
   const sj = input.sj.at(-1) ?? null;
@@ -305,6 +311,12 @@ export function diagnose(input: DunkInput): DunkDiagnosis {
     reasons.push(tr('{name}是 {k} 周前测的，建议复测，结论才跟得上现在的你。', { name, k: Math.floor(ageOf(k)! / 7) }));
   }
 
+  const touchKey: TouchKey | null = source == null ? null : source === 'approach' && input.approachMethod === 'wall' ? 'touch_wall' : 'touch_video';
+  const unverified: (DunkMetricKey | 'touch')[] = [
+    ...metrics.filter((m) => m.value != null && !trusted(evidence[m.key])).map((m) => m.key),
+    ...(touchKey != null && !trusted(evidence[touchKey]) ? (['touch'] as const) : []),
+  ];
+
   const missing: Missing[] = [];
   if (input.bodyMassKg == null) missing.push('body_mass');
   if (input.standingReachCm == null) missing.push('standing_reach');
@@ -326,6 +338,7 @@ export function diagnose(input: DunkInput): DunkDiagnosis {
     reasons,
     missing,
     stale,
+    unverified,
   };
 }
 

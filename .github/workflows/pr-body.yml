@@ -1,0 +1,27 @@
+# Every PR says how its numbers were checked (CLAUDE.md, 规则 6): on a real phone against a wall or another app's
+# reading, only on synthetic video and unit tests, or not about measurement at all. Most PRs before Nov 17 were merged
+# as "未真机验证" without anyone tracking it; ticking one box keeps that visible. Dependabot's PRs are exempt.
+name: PR body
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  validation-status:
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: One validation box is ticked
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          ticked=$(printf '%s\n' "$BODY" | grep -cE '^\s*- \[[xX]\] (真机验证过|只在合成视频|不涉及测量)' || true)
+          if [ "$ticked" != "1" ]; then
+            echo "::error::PR 描述的「验证状态」要恰好勾一项（见 .github/pull_request_template.md），现在勾了 $ticked 项。"
+            exit 1
+          fi
