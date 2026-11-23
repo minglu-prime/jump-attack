@@ -21,6 +21,10 @@ export const en: Record<string, string> = {
   '{length} 次测试{p}': '{length} tests{p}',
 
   // app/(tabs)/index.tsx
+  '今日训练': 'Today’s training',
+  '开始今日训练': 'Start today’s training',
+  '首页没加载出来': 'Home didn’t load',
+  '打开训练页': 'Open the Train tab',
   '训练和测试': 'Training and tests',
   '辅助': 'Support',
   '今早膝盖几分': 'Knee pain this morning (0–10)',

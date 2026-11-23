@@ -1,7 +1,7 @@
 import { Link, router, useFocusEffect, type Href } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DayStateRow } from '@/components/dunk';
@@ -10,57 +10,104 @@ import { Icon } from '@/components/Icon';
 import { PressScale, Rise } from '@/components/motion';
 import { ScoreScale } from '@/components/ScoreScale';
 import { ReachHero } from '@/components/ReachHero';
-import { Card } from '@/components/ui';
+import { AdjustmentNote } from '@/components/training';
+import { Button, Card } from '@/components/ui';
 import { loadDiagnosis } from '@/db/dunk';
 import { listDunkAttempts } from '@/db/dunkAttempts';
 import { listPain, setPain } from '@/db/pain';
 import { dayState, RIM_CM, type DayState, type DunkDiagnosis } from '@/domain/dunk';
-import { addDays } from '@/domain/dates';
+import { addDays, shortDate, type ISODate } from '@/domain/dates';
 import { attemptSummary, BALL_NAME, type AttemptSummary } from '@/domain/dunkAttempts';
 import { kneeStatus, PAIN_HINT, PAIN_LIMIT, type PainEntry } from '@/domain/pain';
+import { nextSession, planDay, planFinished } from '@/domain/plan';
 import { CATEGORIES, SUPPORT_CATEGORIES, type CategoryDef } from '@/domain/metrics';
 import { tr } from '@/i18n';
 import { useAthlete } from '@/state/athlete';
 import { loadGoalSummary } from '@/state/goal';
-import { loadReadiness, todayISO } from '@/state/training';
+import { beginWorkout, loadReadiness, loadTraining, sessionFor, todayISO, type DayReadiness, type TrainingData } from '@/state/training';
 import { colors, radius, text } from '@/theme';
+
+type Goal = { diagnosis: DunkDiagnosis; state: DayState; attempts: AttemptSummary | null; due: GoalText; readiness: DayReadiness; training: TrainingData | null };
 
 /** Leads with how far the athlete is from dunking; every module below serves that. */
 export default function Home() {
   const db = useSQLiteContext();
   const { current } = useAthlete();
-  const [goal, setGoal] = useState<{ diagnosis: DunkDiagnosis; state: DayState; attempts: AttemptSummary | null; due: GoalText } | null>(null);
+  const [goal, setGoal] = useState<Goal | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
   const [pain, setPainEntries] = useState<PainEntry[]>([]);
   const today = todayISO();
   const main = CATEGORIES.filter((c) => !SUPPORT_CATEGORIES.includes(c.key));
   const support = CATEGORIES.filter((c) => SUPPORT_CATEGORIES.includes(c.key));
 
+  const load = useCallback(async () => {
+    if (!current) return;
+    const today = todayISO();
+    try {
+      const [diagnosis, readiness, attempts, training, entries] = await Promise.all([
+        loadDiagnosis(db, current),
+        loadReadiness(db, current.id, today),
+        listDunkAttempts(db, current.id),
+        loadTraining(db, current.id),
+        listPain(db, current.id),
+      ]);
+      setPainEntries(entries);
+      setGoal({
+        diagnosis,
+        state: dayState(readiness),
+        // The goal setup first; practice at a lower rim or with a smaller ball when that is all there is.
+        attempts: attemptSummary(attempts, { rimCm: current.rim_height_cm ?? RIM_CM, ball: 'basketball' }) ?? attemptSummary(attempts),
+        due: await loadGoalSummary(db, current, diagnosis, today),
+        readiness,
+        training,
+      });
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+    }
+  }, [db, current]);
+
   useFocusEffect(
     useCallback(() => {
-      if (!current) return;
-      const today = todayISO();
-      listPain(db, current.id).then(setPainEntries);
-      Promise.all([loadDiagnosis(db, current), loadReadiness(db, current.id, today), listDunkAttempts(db, current.id)]).then(async ([diagnosis, readiness, attempts]) =>
-        setGoal({
-          diagnosis,
-          state: dayState(readiness),
-          // The goal setup first; practice at a lower rim or with a smaller ball when that is all there is.
-          attempts: attemptSummary(attempts, { rimCm: current.rim_height_cm ?? RIM_CM, ball: 'basketball' }) ?? attemptSummary(attempts),
-          due: await loadGoalSummary(db, current, diagnosis, today),
-        }),
-      );
-    }, [db, current]),
+      load();
+    }, [load]),
   );
+
+  // Same as the training tab's start: begin (or reopen) today's workout with today's readiness, then open it.
+  async function openToday(training: TrainingData) {
+    setStarting(true);
+    try {
+      await beginWorkout(db, training, today);
+      router.push({ pathname: '/workout/[date]', params: { date: today } });
+    } catch (e) {
+      Alert.alert(tr('无法开始训练'), String(e));
+    } finally {
+      setStarting(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
+        {error ? (
+          <Card style={{ gap: 12 }}>
+            <Text style={text.section}>{tr('首页没加载出来')}</Text>
+            <Text style={text.muted}>{error}</Text>
+            <Button label={tr('重试')} accessibilityLabel={tr('重试')} variant="secondary" onPress={load} />
+          </Card>
+        ) : (
+          !goal && <ActivityIndicator color={colors.accent} style={{ paddingVertical: 48 }} />
+        )}
         {goal && (
           <View style={styles.goal}>
             <ReachHero diagnosis={goal.diagnosis} standingReach={current?.standing_reach_cm ?? null} name={current?.name ?? ''} onSwitchAthlete={() => router.push('/me')} />
             <Rise index={1}>
               <DunkSummary diagnosis={goal.diagnosis} />
+            </Rise>
+            <Rise index={2}>
+              <TodayCard training={goal.training} readiness={goal.readiness} pain={pain} today={today} starting={starting} onOpen={openToday} />
             </Rise>
             <Rise index={2}>
               <GoalRow due={goal.due} />
@@ -124,6 +171,80 @@ function MorningKnee({ entries, today, onPick }: { entries: PainEntry[]; today: 
         </Text>
       ))}
       {knee?.light === 'green' && <Text style={text.muted}>{tr('膝盖没问题，照常练。')}</Text>}
+    </Card>
+  );
+}
+
+/**
+ * 今天练什么: today's session as the training tab shows it (readiness and knee adjustments included), with the way
+ * into it; on a rest day the next session; without a plan the way to pick one.
+ */
+function TodayCard({
+  training,
+  readiness,
+  pain,
+  today,
+  starting,
+  onOpen,
+}: {
+  training: TrainingData | null;
+  readiness: DayReadiness;
+  pain: PainEntry[];
+  today: ISODate;
+  starting: boolean;
+  onOpen: (training: TrainingData) => void;
+}) {
+  if (!training) {
+    return (
+      <Card style={{ gap: 12 }}>
+        <Text style={text.muted}>{tr('今日训练')}</Text>
+        <Text style={text.heading}>{tr('还没有训练计划')}</Text>
+        <Button label={tr('选择训练计划')} accessibilityLabel={tr('选择训练计划')} onPress={() => router.push('/plan/new')} />
+      </Card>
+    );
+  }
+
+  const { template, plan, workouts } = training;
+  const planned = planDay(template, plan, today);
+  if (!planned) {
+    const next = nextSession(template, plan, addDays(today, 1));
+    return (
+      <Card style={{ gap: 4 }}>
+        <Text style={text.muted}>{tr('今日训练')}</Text>
+        <Text style={text.heading}>{planFinished(template, plan, today) ? tr('计划已完成') : tr('休息日')}</Text>
+        {next && <Text style={text.muted}>{tr('下次：{date} · {code} {name}', { date: shortDate(next.date), code: next.session.code, name: next.session.name })}</Text>}
+      </Card>
+    );
+  }
+
+  const workout = workouts.find((w) => w.date === today);
+  const knee = kneeStatus(pain, today);
+  const shown = sessionFor(planned, workout, readiness.readiness, knee?.light);
+  const label = workout?.finishedAt ? tr('查看训练记录') : workout ? tr('继续训练') : tr('开始今日训练');
+  return (
+    <Card style={{ gap: 12 }}>
+      <View style={styles.todayHead}>
+        <Text style={text.muted}>{tr('今日训练')}</Text>
+        {workout?.finishedAt ? <Text style={[styles.tag, { color: colors.good }]}>{tr('已完成')}</Text> : workout ? <Text style={[styles.tag, { color: colors.warn }]}>{tr('进行中')}</Text> : null}
+      </View>
+      <View style={{ gap: 2 }}>
+        <Text style={text.heading}>
+          {planned.session.code} · {planned.session.name}
+        </Text>
+        <Text style={text.muted}>{shown.session.items.map((p) => p.name).join(' · ')}</Text>
+      </View>
+      <AdjustmentNote
+        adjustments={shown.adjustments}
+        reason={workout ? workout.reason : readiness.signals.join(tr('；')) || null}
+        dropPct={workout ? workout.cmjDrop : readiness.dropPct}
+        kneeReasons={knee?.reasons}
+      />
+      {planned.goal === 'test' ? (
+        // The test day's own actions (touch test, dunk attempts) live on the training tab.
+        <Button label={tr('打开训练页')} accessibilityLabel={tr('打开训练页')} onPress={() => router.push('/train')} />
+      ) : (
+        <Button label={label} accessibilityLabel={label} variant={workout?.finishedAt ? 'secondary' : 'primary'} busy={starting} onPress={() => onOpen(training)} />
+      )}
     </Card>
   );
 }
@@ -197,6 +318,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 20, paddingTop: 12, gap: 24 },
   goal: { gap: 12 },
+  todayHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  tag: { fontSize: 12, fontWeight: '700' },
   list: { gap: 10 },
   module: { backgroundColor: colors.surface, borderRadius: radius.row, minHeight: 68, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 14 },
   moduleDisabled: { opacity: 0.5 },
