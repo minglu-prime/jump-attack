@@ -188,3 +188,13 @@ it('asks before closing throws away a take, and closes straight away before film
   await press('关闭');
   expect(mockRouter.back).toHaveBeenCalled();
 });
+
+it('also asks when recording was asked for but has not started yet', async () => {
+  await open({ to: '/measure/analyse', metric: 'cmj', session: 'cmj-1' });
+  await press('开始录像');
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  await press('关闭');
+  expect(mockRouter.back).not.toHaveBeenCalled();
+  expect(alert).toHaveBeenCalledWith('放弃这段录像？', '正在录的这段不会保存。', expect.any(Array));
+  alert.mockRestore();
+});

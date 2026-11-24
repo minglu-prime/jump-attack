@@ -10,7 +10,7 @@ import { dropTake } from '@/media/takes';
  */
 export function leaveCamera(rec: { name: string; take?: Recorded }, leave: () => void) {
   const take = rec.name === 'recorded' ? rec.take : undefined;
-  if (!take && rec.name !== 'recording' && rec.name !== 'stopping') return leave();
+  if (!take && rec.name !== 'starting' && rec.name !== 'recording' && rec.name !== 'stopping') return leave();
   Alert.alert(tr('放弃这段录像？'), take ? tr('录好的 {seconds} 秒不会保存。', { seconds: decimal(take.seconds, 1) }) : tr('正在录的这段不会保存。'), [
     { text: tr('继续拍'), style: 'cancel' },
     {

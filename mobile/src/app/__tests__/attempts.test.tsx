@@ -4,7 +4,7 @@ import { Alert, Text, TextInput } from 'react-native';
 
 import { addDunkAttempt, listDunkAttempts } from '@/db/dunkAttempts';
 import { migrate } from '@/db/migrations';
-import { getAthlete, type Athlete } from '@/db/repo';
+import { createAthlete, getAthlete, type Athlete } from '@/db/repo';
 import { addTechniqueTake, listTechniqueTakes } from '@/db/technique';
 import { openMemoryDb } from '@/db/testing/memoryDb';
 import { analyseTechnique } from '@/domain/technique';
@@ -238,4 +238,18 @@ it('says what was just logged and takes it back with one tap, without asking', a
   expect(await listDunkAttempts(mockDb, 1)).toHaveLength(before);
   expect(texts(r.root)).not.toContain('记了一次');
   alert.mockRestore();
+});
+
+it('does not offer to undo another athlete’s attempt after switching athlete', async () => {
+  const r = await render(<Attempts />);
+  await press(r.root, '扣进');
+  expect(texts(r.root)).toContain('记了一次：扣进');
+
+  const me = mockAthlete.current;
+  mockAthlete.current = await getAthlete(mockDb, await createAthlete(mockDb, '队友'));
+  await act(async () => r.update(<Attempts />));
+  await act(async () => {});
+  expect(texts(r.root)).not.toContain('记了一次');
+  expect(r.root.findAll((n) => n.props.accessibilityLabel === '撤销刚才这次')).toHaveLength(0);
+  mockAthlete.current = me;
 });

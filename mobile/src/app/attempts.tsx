@@ -46,7 +46,9 @@ export default function Attempts() {
   const [rimText, setRimText] = useState<string | null>(null);
   const [ball, setBall] = useState<Ball | null>(null);
   // The attempt just logged, which one tap takes back: a thumb that hit the wrong button needs no confirm.
-  const [justLogged, setJustLogged] = useState<{ id: number; outcome: Outcome } | null>(null);
+  const [logged, setJustLogged] = useState<{ id: number; outcome: Outcome; athleteId: number } | null>(null);
+  // Only for the athlete it was logged for: after switching athlete there is nothing of theirs to take back.
+  const justLogged = logged && logged.athleteId === current?.id ? logged : null;
   /** The jump height of each analysed attempt, by its analysis's trial id. */
   const [heights, setHeights] = useState<Record<number, Measured>>({});
   const [poseReady, setPoseReady] = useState(false);
@@ -83,7 +85,7 @@ export default function Attempts() {
     if (!current || rimCm == null || problem) return;
     try {
       const id = await addDunkAttempt(db, current.id, { rimCm, ball: ballNow, outcome });
-      setJustLogged({ id, outcome });
+      setJustLogged({ id, outcome, athleteId: current.id });
       await load();
     } catch (e) {
       Alert.alert(tr('没记上'), String(e));

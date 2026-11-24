@@ -53,7 +53,7 @@ export function Empty({ title, hint }: { title: string; hint?: string }) {
 /** Shown while a screen's data is read, so loading never reads as a blank page or as "no records". */
 export function Loading() {
   return (
-    <View style={styles.empty}>
+    <View style={styles.empty} accessible accessibilityRole="progressbar" accessibilityLabel={tr('正在加载')}>
       <ActivityIndicator color={colors.accent} />
     </View>
   );

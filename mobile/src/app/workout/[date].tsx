@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
@@ -108,6 +108,12 @@ export default function WorkoutScreen() {
     if (entry) await logSet(db, workout.id, entry);
     else await unlogSet(db, workout.id, p.code, setNo);
     await reload();
+    // The note below is not a pop-up any more, so a screen reader is told about it.
+    const v = entry?.mean_velocity;
+    if (v == null) return;
+    const others = sets.filter((s) => s.exercise_code === p.code && s.set_no !== setNo && s.mean_velocity != null).map((s) => s.mean_velocity!);
+    const check = checkSet(v, suggested[p.code]?.minV ?? null, others.length ? Math.max(...others) : null);
+    if (check.stop) AccessibilityInfo.announceForAccessibility([tr('今天到这里为止'), tr('{why}。{name}剩下的组今天不做了，硬练只会积累疲劳。', { why: check.why, name: p.name })].join(' '));
   }
 
   // Whether the exercise's latest set with a bar speed says to stop; shown on its card instead of a pop-up mid-session.

@@ -21,6 +21,7 @@ export const de: Record<string, string> = {
   '{length} 次测试{p}': '{length} Tests{p}',
 
   // app/(tabs)/index.tsx
+  '正在加载': 'Wird geladen',
   '没撤销成功': 'Rückgängig machen fehlgeschlagen',
   '撤销': 'Rückgängig',
   '撤销刚才这次': 'Letzten Versuch rückgängig machen',

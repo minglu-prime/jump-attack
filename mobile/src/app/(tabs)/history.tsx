@@ -44,8 +44,8 @@ export default function History() {
         .map(getMetric)
         .filter((m): m is MetricDef => m != null);
       const defs = [...known, ...extra];
-      setRows(
-        await Promise.all(
+      const [nextRows, nextDiagnosis, nextOffset] = await Promise.all([
+        Promise.all(
           defs.map(async (m) => ({
             def: m,
             color: metricColor(m),
@@ -53,9 +53,13 @@ export default function History() {
             ...(m.category === 'speed' ? { timings: await sessionTimings(db, current.id, m.code) } : {}),
           })),
         ),
-      );
-      setDiagnosis(await loadDiagnosis(db, current));
-      setOffset(await touchOffsetFor(db, current.id));
+        loadDiagnosis(db, current),
+        touchOffsetFor(db, current.id),
+      ]);
+      // All at once, so a read that fails half-way never leaves one athlete's rows beside another's diagnosis.
+      setRows(nextRows);
+      setDiagnosis(nextDiagnosis);
+      setOffset(nextOffset);
       setLoaded(true);
       setError(null);
     } catch (e) {
