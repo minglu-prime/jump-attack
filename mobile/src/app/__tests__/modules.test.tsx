@@ -379,7 +379,9 @@ describe('VBT', () => {
     const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     await type(r.root, 'm/s', '0.62');
     await press(r.root, '杠铃后蹲 第 1 组');
-    expect(alert).toHaveBeenCalledWith('今天到这里为止', '这组 0.62 m/s，低于今天的达标线 0.70 m/s。杠铃后蹲剩下的组今天不做了，硬练只会积累疲劳。');
+    // Said on the exercise's own card, not in a pop-up that stops the athlete mid-session.
+    expect(alert).not.toHaveBeenCalled();
+    expect(texts(r.root)).toContain('今天到这里为止\n这组 0.62 m/s，低于今天的达标线 0.70 m/s。杠铃后蹲剩下的组今天不做了，硬练只会积累疲劳。');
     const plan = await mockDb.getFirstAsync<{ id: number }>('SELECT id FROM plan WHERE ended_at IS NULL');
     const w = (await getWorkout(mockDb, plan!.id, today))!;
     expect((await listSets(mockDb, w.id)).find((x) => x.exercise_code === 'back_squat')).toMatchObject({ load_kg: 80, mean_velocity: 0.62 });

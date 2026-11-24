@@ -108,11 +108,15 @@ export default function WorkoutScreen() {
     if (entry) await logSet(db, workout.id, entry);
     else await unlogSet(db, workout.id, p.code, setNo);
     await reload();
-    const v = entry?.mean_velocity;
-    if (v == null) return;
-    const others = sets.filter((s) => s.exercise_code === p.code && s.set_no !== setNo && s.mean_velocity != null).map((s) => s.mean_velocity!);
-    const check = checkSet(v, suggested[p.code]?.minV ?? null, others.length ? Math.max(...others) : null);
-    if (check.stop) Alert.alert(tr('今天到这里为止'), tr('{why}。{name}剩下的组今天不做了，硬练只会积累疲劳。', { why: check.why, name: p.name }));
+  }
+
+  // Whether the exercise's latest set with a bar speed says to stop; shown on its card instead of a pop-up mid-session.
+  function stopWhy(p: Prescription): string | null {
+    const timed = sets.filter((s) => s.exercise_code === p.code && s.mean_velocity != null).sort((a, b) => a.set_no - b.set_no);
+    const last = timed.at(-1);
+    if (!last) return null;
+    const others = timed.filter((s) => s !== last).map((s) => s.mean_velocity!);
+    return checkSet(last.mean_velocity!, suggested[p.code]?.minV ?? null, others.length ? Math.max(...others) : null).why;
   }
 
   async function logWarmup(lift: string, kg: number, v: number) {
@@ -131,9 +135,14 @@ export default function WorkoutScreen() {
   async function finish() {
     const go = async () => {
       setFinishing(true);
-      await finishWorkout(db, workout.id);
-      await reload();
-      setFinishing(false);
+      try {
+        await finishWorkout(db, workout.id);
+        await reload();
+      } catch (e) {
+        Alert.alert(tr('没能完成训练'), String(e));
+      } finally {
+        setFinishing(false);
+      }
     };
     if (summary.setsDone < summary.setsPlanned) {
       Alert.alert(tr('结束训练？'), tr('还有 {setsPlanned} 组没打勾，会按已完成的记录。', { setsPlanned: summary.setsPlanned - summary.setsDone }), [
@@ -233,6 +242,12 @@ export default function WorkoutScreen() {
                 />
               );
             })}
+            {!done && stopWhy(p) && (
+              <View style={styles.stop}>
+                <Text style={styles.stopTitle}>{tr('今天到这里为止')}</Text>
+                <Text style={styles.dayLine}>{tr('{why}。{name}剩下的组今天不做了，硬练只会积累疲劳。', { why: stopWhy(p), name: p.name })}</Text>
+              </View>
+            )}
           </Card>
         ))}
       </ScrollView>
@@ -441,6 +456,8 @@ const styles = StyleSheet.create({
   dayLine: { color: colors.textSoft, fontSize: 12, lineHeight: 18 },
   warmup: { gap: 4, paddingBottom: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider },
   setRowBelow: { borderWidth: 1, borderColor: colors.warn },
+  stop: { borderRadius: radius.row, borderWidth: 1, borderColor: colors.warn, padding: 12, gap: 4 },
+  stopTitle: { color: colors.warn, fontSize: 13, fontWeight: '700' },
   setRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, paddingHorizontal: 8, borderRadius: radius.chip },
   setRowDone: { backgroundColor: colors.accentTile },
   setNo: { width: 18, color: colors.textMuted, fontFamily: fonts.numeric, fontSize: 16, textAlign: 'center' },
