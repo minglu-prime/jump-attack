@@ -222,3 +222,20 @@ describe('filming an attempt', () => {
     mockParams = {};
   });
 });
+
+it('says what was just logged and takes it back with one tap, without asking', async () => {
+  const before = (await listDunkAttempts(mockDb, 1)).length;
+  const r = await render(<Attempts />);
+  // An earlier test may still spy on Alert: count only this test's calls.
+  const alert = jest.spyOn(Alert, 'alert');
+  alert.mockClear();
+  await press(r.root, '碰框没进');
+  expect(texts(r.root)).toContain('记了一次：碰框没进');
+  expect(await listDunkAttempts(mockDb, 1)).toHaveLength(before + 1);
+
+  await press(r.root, '撤销刚才这次');
+  expect(alert).not.toHaveBeenCalled();
+  expect(await listDunkAttempts(mockDb, 1)).toHaveLength(before);
+  expect(texts(r.root)).not.toContain('记了一次');
+  alert.mockRestore();
+});
