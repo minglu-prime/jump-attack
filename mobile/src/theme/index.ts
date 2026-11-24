@@ -36,15 +36,28 @@ export const fonts = {
 
 export const radius = { card: 20, row: 18, button: 16, chip: 14 };
 
-/** Motion timing shared by every screen (ms), so entrances and presses feel like one app. */
+/**
+ * The app's one motion language (ms). Every change of state uses one of these, so the same kind of change always
+ * moves the same way. Short and on one ease-out curve: things arrive fast and settle, nothing lingers or bounces.
+ */
 export const motion = {
-  enter: 420,
-  stagger: 60,
-  rise: 14,
-  pressScale: 0.97,
-  count: 1100,
-  countDelay: 250,
-  press: { speed: 40, bounciness: 6 },
+  /** A section or note arriving: fades in while rising `rise` px. */
+  enter: 240,
+  rise: 8,
+  /** Siblings arrive one after another, `stagger` apart, the first `staggerMax` only: a long list doesn't wait. */
+  stagger: 35,
+  staggerMax: 4,
+  /** One state replacing another in place (loading → content, a label → a spinner, a number → a tick). */
+  swap: 180,
+  /** Size and position changes: expanding, collapsing, rows added or removed. */
+  layout: 220,
+  /** Pressing gives a little under the thumb and springs back without overshoot. */
+  pressScale: 0.98,
+  press: { stiffness: 420, damping: 34, mass: 1 },
+  /** A key number rolling to its new value. */
+  count: 600,
+  /** cubic-bezier(0.2, 0, 0, 1): an Apple-like ease-out, quick to start with a long gentle settle. */
+  ease: [0.2, 0, 0, 1] as const,
 };
 
 export const text = StyleSheet.create({
