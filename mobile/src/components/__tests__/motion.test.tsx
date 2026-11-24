@@ -14,14 +14,28 @@ function opacityOf(r: ReactTestRenderer): number {
   return typeof style.opacity === 'number' ? style.opacity : style.opacity.__getValue();
 }
 
-afterEach(() => jest.restoreAllMocks());
+const mounted: ReactTestRenderer[] = [];
+const realCreate = create;
+// Every renderer made here is unmounted after its test: a running animation must never outlive the test that started it.
+function track(el: React.ReactElement): ReactTestRenderer {
+  const r = realCreate(el);
+  mounted.push(r);
+  return r;
+}
+
+afterEach(async () => {
+  await act(async () => {
+    for (const r of mounted.splice(0)) r.unmount();
+  });
+  jest.restoreAllMocks();
+});
 
 it('rises into place after a delay that staggers it behind earlier siblings', async () => {
   jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
   const timing = jest.spyOn(Animated, 'timing');
   let r!: ReactTestRenderer;
   await act(async () => {
-    r = create(
+    r = track(
       <Rise index={2}>
         <Text>摸高</Text>
       </Rise>,
@@ -37,7 +51,7 @@ it('shows content at once when the phone asks for less motion', async () => {
   jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
   let r!: ReactTestRenderer;
   await act(async () => {
-    r = create(
+    r = track(
       <Rise>
         <Text>摸高</Text>
       </Rise>,
@@ -50,7 +64,7 @@ it('gives a light tick on press and still runs the action if haptics fail', asyn
   const onPress = jest.fn();
   let r!: ReactTestRenderer;
   await act(async () => {
-    r = create(
+    r = track(
       <PressScale accessibilityLabel="跳跃测试" onPress={onPress}>
         <Text>跳跃测试</Text>
       </PressScale>,
@@ -72,14 +86,17 @@ describe('one motion language', () => {
   it('eases every entrance on the same curve, and staggers only the first few siblings', async () => {
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
     const timing = jest.spyOn(Animated, 'timing');
+    let r!: ReactTestRenderer;
     await act(async () => {
-      create(
+      r = track(
         <Rise index={9}>
           <Text>第 10 项</Text>
         </Rise>,
       );
     });
     expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ duration: motion.enter, delay: motion.staggerMax * motion.stagger, easing: ease }));
+    // Unmounting stops the delayed start; left running, its timer fires later inside another test file.
+    await act(async () => r.unmount());
   });
 
   it('fades a new state in place, and shows it at once with less motion', async () => {
@@ -87,7 +104,7 @@ describe('one motion language', () => {
     const timing = jest.spyOn(Animated, 'timing');
     let r!: ReactTestRenderer;
     await act(async () => {
-      r = create(
+      r = track(
         <FadeIn pop>
           <Text>✓</Text>
         </FadeIn>,
@@ -98,7 +115,7 @@ describe('one motion language', () => {
 
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
     await act(async () => {
-      r = create(
+      r = track(
         <FadeIn pop>
           <Text>✓</Text>
         </FadeIn>,
@@ -129,7 +146,7 @@ describe('one motion language', () => {
     const spring = jest.spyOn(Animated, 'spring');
     let r!: ReactTestRenderer;
     await act(async () => {
-      r = create(
+      r = track(
         <PressScale accessibilityLabel="保存">
           <Text>保存</Text>
         </PressScale>,
@@ -151,7 +168,7 @@ describe('one motion language', () => {
     jest.spyOn(Animated, 'timing').mockReturnValue({ start: () => {}, stop: () => {} } as never);
     let r!: ReactTestRenderer;
     await act(async () => {
-      r = create(<CountUp value={290} from={250} format={(v) => `${v} cm`} />);
+      r = track(<CountUp value={290} from={250} format={(v) => `${v} cm`} />);
     });
     await act(async () => listener!({ value: 271.46 }));
     expect(r.root.findByType(Text).props.children).toBe('271 cm');
@@ -170,7 +187,7 @@ describe('Swap', () => {
     const timing = jest.spyOn(Animated, 'timing');
     let r!: ReactTestRenderer;
     await act(async () => {
-      r = create(swap('保存'));
+      r = track(swap('保存'));
     });
     expect(opacityOf(r)).toBe(1);
     expect(timing).not.toHaveBeenCalled();
@@ -185,7 +202,7 @@ describe('Swap', () => {
     const timing = jest.spyOn(Animated, 'timing');
     let r!: ReactTestRenderer;
     await act(async () => {
-      r = create(swap('保存'));
+      r = track(swap('保存'));
     });
     await act(async () => r.update(swap('busy')));
     expect(opacityOf(r)).toBe(1);
@@ -198,7 +215,7 @@ it('treats a Reduce Motion setting not known yet as on: a press dims, nothing sh
   const spring = jest.spyOn(Animated, 'spring');
   let r!: ReactTestRenderer;
   await act(async () => {
-    r = create(
+    r = track(
       <PressScale accessibilityLabel="保存">
         <Text>保存</Text>
       </PressScale>,
