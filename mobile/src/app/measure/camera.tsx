@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { captureGuide } from '@/components/capture/guides';
 import { leaveCamera } from '@/components/capture/leave';
 import { Icon } from '@/components/Icon';
+import { FadeIn } from '@/components/motion';
 import { PoseCamera, type CameraErrorStage, type CameraInfo, type PoseCameraHandle, type Recorded } from '@/components/PoseCamera';
 import { Button } from '@/components/ui';
 import { getMetric } from '@/domain/metrics';
@@ -202,24 +203,24 @@ export default function TestCamera() {
         )}
 
         {rec.name === 'recorded' && (
-          <View style={styles.panelWrap}>
+          <FadeIn style={styles.panelWrap}>
             <View style={styles.panel}>
               <Text style={styles.panelTitle}>{tr('录好了 · {seconds} 秒', { seconds: decimal(rec.take.seconds, 1) })}</Text>
               <Button label={tr('用这一段')} onPress={() => use(rec.take)} />
               <Button label={tr('重拍')} variant="secondary" onPress={retake} />
             </View>
-          </View>
+          </FadeIn>
         )}
 
         {rec.name === 'failed' && (
-          <View style={styles.panelWrap}>
+          <FadeIn style={styles.panelWrap}>
             <View style={styles.panel}>
               <Text style={styles.panelText}>{rec.message}</Text>
               {/* After a failed take the page may still be holding it: a fresh page films the next one. */}
               <Button label={fatal ? tr('重试') : tr('重拍')} onPress={retry} />
               {fatal && <Button label={tr('返回')} variant="secondary" onPress={() => router.back()} />}
             </View>
-          </View>
+          </FadeIn>
         )}
       </SafeAreaView>
     </View>

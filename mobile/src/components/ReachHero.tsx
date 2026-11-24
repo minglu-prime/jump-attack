@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { openDunkTest } from '@/components/dunkTests';
 import { Icon } from '@/components/Icon';
-import { CountUp, useReduceMotion } from '@/components/motion';
+import { CountUp, ease, useReduceMotion } from '@/components/motion';
 import { greeting } from '@/domain/athletes';
 import { RIM_CM, reachRuler, type DunkDiagnosis } from '@/domain/dunk';
 import { gapHeading, touchSpread } from '@/domain/dunkSummary';
 import { reachVanes, type Vane } from '@/domain/vanes';
 import { decimal, tr } from '@/i18n';
-import { colors, fonts, text } from '@/theme';
+import { colors, fonts, motion, text } from '@/theme';
 
 /** Height of the hero; with the status bar above it, it stays within the top half of the screen. */
 const HEIGHT = 330;
@@ -27,8 +27,8 @@ const cm = (v: number) => (Number.isInteger(v) ? String(v) : decimal(v, 1));
 
 /**
  * The top of the home screen: a jump-and-reach tester (Vertec) drawn faintly behind the numbers. On opening, the vanes
- * under the athlete's best touch swing aside bottom to top, the marker springs up the pole to the touch, the net
- * swishes, and the vanes still between the touch and the dunk line pulse.
+ * under the athlete's best touch swing aside bottom to top and the marker rises up the pole to the touch: it shows
+ * where the touch is, once, then the picture stays still.
  */
 export function ReachHero({ diagnosis: d, standingReach, name, onSwitchAthlete }: { diagnosis: DunkDiagnosis; standingReach: number | null; name: string; onSwitchAthlete: () => void }) {
   const touch = d.touch.value;
@@ -42,8 +42,6 @@ export function ReachHero({ diagnosis: d, standingReach, name, onSwitchAthlete }
   const reduce = useReduceMotion();
   const [sweep] = useState(() => new Animated.Value(0));
   const [rise] = useState(() => new Animated.Value(0));
-  const [swish] = useState(() => new Animated.Value(0));
-  const [pulse] = useState(() => new Animated.Value(1));
   useEffect(() => {
     if (reduce == null) return;
     if (reduce) {
@@ -52,26 +50,12 @@ export function ReachHero({ diagnosis: d, standingReach, name, onSwitchAthlete }
       return;
     }
     const intro = Animated.parallel([
-      Animated.timing(sweep, { toValue: 1, duration: 900, delay: 150, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-      Animated.sequence([Animated.delay(250), Animated.spring(rise, { toValue: 1, speed: 6, bounciness: 9, useNativeDriver: true })]),
-      Animated.sequence([
-        Animated.delay(1000),
-        Animated.timing(swish, { toValue: 1, duration: 160, useNativeDriver: true }),
-        Animated.spring(swish, { toValue: 0, speed: 14, bounciness: 14, useNativeDriver: true }),
-      ]),
+      Animated.timing(sweep, { toValue: 1, duration: motion.count, easing: ease, useNativeDriver: true }),
+      Animated.sequence([Animated.delay(motion.stagger * 2), Animated.timing(rise, { toValue: 1, duration: motion.count, easing: ease, useNativeDriver: true })]),
     ]);
-    const breathe = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 0.35, duration: 800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ]),
-    );
-    intro.start(({ finished }) => finished && breathe.start());
-    return () => {
-      intro.stop();
-      breathe.stop();
-    };
-  }, [reduce, sweep, rise, swish, pulse]);
+    intro.start();
+    return () => intro.stop();
+  }, [reduce, sweep, rise]);
 
   const swept = layout.vanes.filter((v) => v.state === 'swept').length;
   const travel = markerY == null ? 0 : HEIGHT - markerY;
@@ -87,7 +71,7 @@ export function ReachHero({ diagnosis: d, standingReach, name, onSwitchAthlete }
         accessibilityLabel={known ? tr('摸高器：{touchLabel} {touch} cm，扣篮线 {line} cm，{p}', { touchLabel, touch: cm(touch!), line: d.line, p: d.gapCm! > 0 ? tr('还差 {gapCm} cm', { gapCm: decimal(d.gapCm!, 1) }) : tr('已过 {gapCm} cm', { gapCm: decimal((-d.gapCm!), 1) }) }) : tr('摸高器：扣篮线 {line} cm，还没有摸高', { line: d.line })}
       >
         {layout.vanes.map((v, i) => (
-          <VaneBar key={v.cm} v={v} top={y(v.y) - 2} sweep={sweep} pulse={pulse} order={layout.vanes.length - 1 - i} swept={swept} />
+          <VaneBar key={v.cm} v={v} top={y(v.y) - 2} sweep={sweep} order={layout.vanes.length - 1 - i} swept={swept} />
         ))}
         {/* Fade the vanes out to the left so the numbers sit on clean paper. */}
         <Svg width="100%" height="100%" style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -111,11 +95,11 @@ export function ReachHero({ diagnosis: d, standingReach, name, onSwitchAthlete }
         {rimY != null && (
           <>
             <View style={[styles.rim, { top: rimY - 2 }]} />
-            <Animated.View style={[styles.net, { top: rimY + 3, transform: [{ scaleY: swish.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] }) }, { skewX: swish.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-6deg'] }) }] }]}>
+            <View style={[styles.net, { top: rimY + 3 }]}>
               <Svg width={68} height={40} viewBox="0 0 70 46" preserveAspectRatio="none">
                 <Path d="M2 0 12 44M24 0 26 44M46 0 40 44M68 0 56 44M6 14h58M10 30h50" stroke={colors.textMuted} strokeWidth={1.4} fill="none" />
               </Svg>
-            </Animated.View>
+            </View>
             <Text style={[styles.mark, { top: rimY - 20, color: colors.rim }]}>{tr('篮筐 {RIM_CM}', { RIM_CM })}</Text>
           </>
         )}
@@ -174,10 +158,10 @@ export function ReachHero({ diagnosis: d, standingReach, name, onSwitchAthlete }
   );
 }
 
-function VaneBar({ v, top, sweep, pulse, order, swept }: { v: Vane; top: number; sweep: Animated.Value; pulse: Animated.Value; order: number; swept: number }) {
+function VaneBar({ v, top, sweep, order, swept }: { v: Vane; top: number; sweep: Animated.Value; order: number; swept: number }) {
   const width = v.major ? VANE_LONG : VANE_SHORT;
   if (v.state !== 'swept') {
-    return <Animated.View style={[styles.vane, { top, width, backgroundColor: v.state === 'gap' ? colors.accent : colors.vane, opacity: v.state === 'gap' ? pulse : IDLE_OPACITY }]} />;
+    return <Animated.View style={[styles.vane, { top, width, backgroundColor: v.state === 'gap' ? colors.accent : colors.vane, opacity: v.state === 'gap' ? 1 : IDLE_OPACITY }]} />;
   }
   // Bottom vanes swing first, as a hand sweeping up the pole would push them.
   const start = swept > 1 ? (order / (swept - 1)) * 0.6 : 0;

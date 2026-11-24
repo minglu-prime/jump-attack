@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DayStateRow } from '@/components/dunk';
 import { DunkSummary } from '@/components/DunkPanel';
 import { Icon } from '@/components/Icon';
-import { PressScale, Rise } from '@/components/motion';
+import { nextLayout, PressScale, Rise, Turn } from '@/components/motion';
 import { ScoreScale } from '@/components/ScoreScale';
 import { ReachHero } from '@/components/ReachHero';
 import { AdjustmentNote } from '@/components/training';
@@ -128,14 +128,20 @@ export default function Home() {
             {main.map((c) => (
               <ModuleRow key={c.key} category={c} />
             ))}
-            <PressScale accessibilityLabel={tr('辅助')} accessibilityState={{ expanded: supportOpen }} style={styles.support} onPress={() => setSupportOpen((open) => !open)}>
+            <PressScale accessibilityLabel={tr('辅助')} accessibilityState={{ expanded: supportOpen }} style={styles.support} onPress={() => {
+                nextLayout();
+                setSupportOpen((open) => !open);
+              }}
+            >
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={styles.supportTitle}>{tr('辅助')}</Text>
                 <Text style={styles.moduleSub} numberOfLines={1}>
                   {support.map((c) => c.name).join(' · ')}
                 </Text>
               </View>
-              <Icon name={supportOpen ? 'chevronDown' : 'chevronRight'} size={18} color={colors.textMuted} />
+              <Turn open={supportOpen} turned={90}>
+                <Icon name="chevronRight" size={18} color={colors.textMuted} />
+              </Turn>
             </PressScale>
             {supportOpen && support.map((c) => <ModuleRow key={c.key} category={c} />)}
           </View>

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, type PressableProps, type ViewStyle } from 'react-native';
 
-import { PressScale } from '@/components/motion';
+import { FadeIn, PressScale, Swap } from '@/components/motion';
 import { tr } from '@/i18n';
 import { colors, radius } from '@/theme';
 
@@ -20,11 +20,13 @@ export function Button({ label, variant = 'primary', busy, disabled, style, ...r
       style={[styles.button, isPrimary ? styles.primary : variant === 'secondary' ? styles.secondary : styles.ghost, (disabled || busy) && styles.disabled, style]}
       {...rest}
     >
-      {busy ? (
-        <ActivityIndicator color={isPrimary ? colors.onAccent : colors.text} />
-      ) : (
-        <Text style={[styles.buttonLabel, { color: isPrimary ? colors.onAccent : colors.text }]}>{label}</Text>
-      )}
+      <Swap id={!!busy}>
+        {busy ? (
+          <ActivityIndicator color={isPrimary ? colors.onAccent : colors.text} />
+        ) : (
+          <Text style={[styles.buttonLabel, { color: isPrimary ? colors.onAccent : colors.text }]}>{label}</Text>
+        )}
+      </Swap>
     </PressScale>
   );
 }
@@ -62,13 +64,13 @@ export function Loading() {
 /** A read that failed: what failed, the error itself, and the way to try again. */
 export function LoadFailed({ title, error, onRetry }: { title: string; error: string; onRetry: () => void }) {
   return (
-    <View style={styles.empty}>
+    <FadeIn style={styles.empty}>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text selectable style={styles.emptyHint}>
         {error}
       </Text>
       <Button label={tr('重试')} accessibilityLabel={tr('重试')} variant="secondary" onPress={onRetry} style={{ marginTop: 10 }} />
-    </View>
+    </FadeIn>
   );
 }
 

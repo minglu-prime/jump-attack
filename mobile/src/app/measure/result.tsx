@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
 import { RecordHero } from '@/components/RecordHero';
+import { FadeIn } from '@/components/motion';
 import { Button, LoadFailed, Loading } from '@/components/ui';
 import { deleteTrial, listMetricResults, listTrials, sessionTimings, updateTrialValue, type Trial } from '@/db/repo';
 import { trendBaseline } from '@/domain/assess';
@@ -112,85 +113,88 @@ export default function Result() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
-        {record && best != null ? (
-          <RecordHero
-            label={label}
-            value={decimal(best, def.decimals)}
-            unit={def.unit}
-            gain={def.lowerIsBetter ? tr('快了 {by} {unit}', { by: decimal(record.by, def.decimals), unit: def.unit }) : `+${decimal(record.by, def.decimals)} ${def.unit}`}
-          />
-        ) : (
-          <View style={styles.hero}>
-            <Text style={styles.heroLabel}>{label}</Text>
-            <Text style={styles.heroValue}>
-              {best != null ? decimal(best, def.decimals) : '—'} <Text style={styles.heroUnit}>{def.unit}</Text>
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.card}>
-          {trials.map((t, i) => (
-            <View key={t.id} style={styles.trialRow}>
-              <Text style={styles.trialN}>{i + 1}</Text>
-              <View style={styles.barTrack}>
-                <View style={[styles.bar, { width: `${(t.value / scale) * 100}%`, backgroundColor: counted.has(t.id) ? colors.accent : colors.textFaint }]} />
-              </View>
-              <Text style={styles.trialValue}>{decimal(t.value, def.decimals)}</Text>
-              {editable(t) && (
-                <Pressable accessibilityRole="button" accessibilityLabel={tr('改第 {i} 次', { i: i + 1 })} onPress={() => setEditing({ id: t.id, n: i + 1, raw: String(t.value) })} style={styles.trash}>
-                  <Icon name="edit" size={18} color={colors.textMuted} />
-                </Pressable>
-              )}
-              <Pressable accessibilityRole="button" accessibilityLabel={tr('删除第 {i} 次', { i: i + 1 })} onPress={() => remove(t, i + 1)} style={styles.trash}>
-                <Icon name="trash" size={18} color={colors.textMuted} />
-              </Pressable>
-            </View>
-          ))}
-          {flights.length > 0 && def.capture.includes('flight') && (
-            <Text style={styles.trialMeta}>{tr('滞空 {p} ms · {fps} fps', { p: flights.map((t) => Math.round(t.flight_ms!)).join(' / '), fps: flights[0].fps })}</Text>
-          )}
-          {trials.some((t) => t.detail?.source === 'manual') && <Text style={styles.trialMeta}>{tr('含手动输入的成绩')}</Text>}
-        </View>
-
-        {editing && (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>{tr('改第 {n} 次', { n: editing.n })}</Text>
-            <TextInput
-              value={editing.raw}
-              onChangeText={(raw) => setEditing({ ...editing, raw })}
-              keyboardType="decimal-pad"
-              autoFocus
-              style={styles.editInput}
-              accessibilityLabel={tr('第 {n} 次（{unit}）', { n: editing.n, unit: def.unit })}
+      {/* Loading gives way to the page by fading, not by a hard cut. */}
+      <FadeIn style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content}>
+          {record && best != null ? (
+            <RecordHero
+              label={label}
+              value={decimal(best, def.decimals)}
+              unit={def.unit}
+              gain={def.lowerIsBetter ? tr('快了 {by} {unit}', { by: decimal(record.by, def.decimals), unit: def.unit }) : `+${decimal(record.by, def.decimals)} ${def.unit}`}
             />
-            {editProblem ? <Text style={styles.problem}>{editProblem}</Text> : null}
-            <View style={styles.editButtons}>
-              <Button label={tr('取消')} variant="secondary" onPress={() => setEditing(null)} style={{ flex: 1 }} />
-              <Button label={tr('保存修改')} onPress={saveEdit} disabled={editValue == null || editProblem != null} style={{ flex: 1 }} />
+          ) : (
+            <View style={styles.hero}>
+              <Text style={styles.heroLabel}>{label}</Text>
+              <Text style={styles.heroValue}>
+                {best != null ? decimal(best, def.decimals) : '—'} <Text style={styles.heroUnit}>{def.unit}</Text>
+              </Text>
             </View>
-          </View>
-        )}
+          )}
 
-        {assessment && (
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>{tr('评估')}</Text>
-            <Text style={[styles.assessText, { color: assessment.change.verdict === 'better' ? colors.good : assessment.change.verdict === 'worse' ? colors.warn : colors.textSoft }]}>
-              {assessment.change.text}
-            </Text>
-            {assessment.readiness && (
-              <Text style={[styles.assessText, { color: assessment.readiness.readiness === 'fatigued' ? colors.warn : colors.good }]}>{assessment.readiness.text}</Text>
+            {trials.map((t, i) => (
+              <View key={t.id} style={styles.trialRow}>
+                <Text style={styles.trialN}>{i + 1}</Text>
+                <View style={styles.barTrack}>
+                  <View style={[styles.bar, { width: `${(t.value / scale) * 100}%`, backgroundColor: counted.has(t.id) ? colors.accent : colors.textFaint }]} />
+                </View>
+                <Text style={styles.trialValue}>{decimal(t.value, def.decimals)}</Text>
+                {editable(t) && (
+                  <Pressable accessibilityRole="button" accessibilityLabel={tr('改第 {i} 次', { i: i + 1 })} onPress={() => setEditing({ id: t.id, n: i + 1, raw: String(t.value) })} style={styles.trash}>
+                    <Icon name="edit" size={18} color={colors.textMuted} />
+                  </Pressable>
+                )}
+                <Pressable accessibilityRole="button" accessibilityLabel={tr('删除第 {i} 次', { i: i + 1 })} onPress={() => remove(t, i + 1)} style={styles.trash}>
+                  <Icon name="trash" size={18} color={colors.textMuted} />
+                </Pressable>
+              </View>
+            ))}
+            {flights.length > 0 && def.capture.includes('flight') && (
+              <Text style={styles.trialMeta}>{tr('滞空 {p} ms · {fps} fps', { p: flights.map((t) => Math.round(t.flight_ms!)).join(' / '), fps: flights[0].fps })}</Text>
             )}
-            {poorDay && <Text style={[styles.assessText, { color: colors.textMuted }]}>{tr(POOR_DAY_NOTE)}</Text>}
+            {trials.some((t) => t.detail?.source === 'manual') && <Text style={styles.trialMeta}>{tr('含手动输入的成绩')}</Text>}
           </View>
-        )}
 
-        {!fromHistory && (
-          <Pressable accessibilityRole="link" onPress={() => router.push({ pathname: '/history/[metric]', params: { metric } })}>
-            <Text style={styles.link}>{tr('查看历史趋势')}</Text>
-          </Pressable>
-        )}
-      </ScrollView>
+          {editing && (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>{tr('改第 {n} 次', { n: editing.n })}</Text>
+              <TextInput
+                value={editing.raw}
+                onChangeText={(raw) => setEditing({ ...editing, raw })}
+                keyboardType="decimal-pad"
+                autoFocus
+                style={styles.editInput}
+                accessibilityLabel={tr('第 {n} 次（{unit}）', { n: editing.n, unit: def.unit })}
+              />
+              {editProblem ? <Text style={styles.problem}>{editProblem}</Text> : null}
+              <View style={styles.editButtons}>
+                <Button label={tr('取消')} variant="secondary" onPress={() => setEditing(null)} style={{ flex: 1 }} />
+                <Button label={tr('保存修改')} onPress={saveEdit} disabled={editValue == null || editProblem != null} style={{ flex: 1 }} />
+              </View>
+            </View>
+          )}
+
+          {assessment && (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>{tr('评估')}</Text>
+              <Text style={[styles.assessText, { color: assessment.change.verdict === 'better' ? colors.good : assessment.change.verdict === 'worse' ? colors.warn : colors.textSoft }]}>
+                {assessment.change.text}
+              </Text>
+              {assessment.readiness && (
+                <Text style={[styles.assessText, { color: assessment.readiness.readiness === 'fatigued' ? colors.warn : colors.good }]}>{assessment.readiness.text}</Text>
+              )}
+              {poorDay && <Text style={[styles.assessText, { color: colors.textMuted }]}>{tr(POOR_DAY_NOTE)}</Text>}
+            </View>
+          )}
+
+          {!fromHistory && (
+            <Pressable accessibilityRole="link" onPress={() => router.push({ pathname: '/history/[metric]', params: { metric } })}>
+              <Text style={styles.link}>{tr('查看历史趋势')}</Text>
+            </Pressable>
+          )}
+        </ScrollView>
+      </FadeIn>
 
       <View style={styles.footer}>
         {fromHistory ? (

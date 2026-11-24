@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, LayoutAnimation, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { STATUS_COLOR } from '@/components/dunk';
 import { Icon } from '@/components/Icon';
+import { ease, nextLayout, Turn } from '@/components/motion';
 import { Card } from '@/components/ui';
 import { openDunkTest } from '@/components/dunkTests';
 import { BLOCKS, MISSING_TEXT, RIM_CM, reachRuler, type DunkDiagnosis, type DunkMetric, type Missing } from '@/domain/dunk';
 import { gapHeading, touchNote } from '@/domain/dunkSummary';
 import { decimal, tr } from '@/i18n';
-import { colors, fonts, radius, text } from '@/theme';
+import { colors, fonts, motion, radius, text } from '@/theme';
 
 function statusLabel(m: DunkMetric): string {
   switch (m.status) {
@@ -55,7 +56,7 @@ export function DunkHero({ diagnosis: d, standingReach }: { diagnosis: DunkDiagn
       .then((reduce) => {
         if (!live) return;
         if (reduce) fill.setValue(progress);
-        else Animated.timing(fill, { toValue: progress, duration: 700, easing: Easing.out(Easing.exp), useNativeDriver: false }).start();
+        else Animated.timing(fill, { toValue: progress, duration: motion.count, easing: ease, useNativeDriver: false }).start();
       });
     return () => {
       live = false;
@@ -196,7 +197,7 @@ export function DunkPanel({ diagnosis: d, standingReach }: { diagnosis: DunkDiag
 export function DunkSummary({ diagnosis: d }: { diagnosis: DunkDiagnosis }) {
   const [open, setOpen] = useState(false);
   const toggle = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.create(220, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
+    nextLayout();
     setOpen((o) => !o);
   };
   const [next, ...later] = d.missing;
@@ -267,9 +268,9 @@ export function DunkSummary({ diagnosis: d }: { diagnosis: DunkDiagnosis }) {
 
       <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel={open ? tr('收起诊断详情') : tr('展开诊断详情')} onPress={toggle} style={[styles.toggle, open && { borderTopWidth: 0 }]}>
         <Text style={styles.toggleText}>{open ? tr('收起') : later.length > 0 ? tr('理由、目标和另外 {length} 项待测', { length: later.length }) : tr('理由和各项目标')}</Text>
-        <View style={open && { transform: [{ rotate: '180deg' }] }}>
+        <Turn open={open}>
           <Icon name="chevronDown" size={16} color={colors.textMuted} />
-        </View>
+        </Turn>
       </Pressable>
     </Card>
   );

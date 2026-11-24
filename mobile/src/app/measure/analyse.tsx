@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FrameReader, type ClipInfo, type FrameReaderHandle } from '@/components/FrameReader';
 import { PoseReader, type PoseReaderHandle } from '@/components/PoseReader';
-import { Rise, tick } from '@/components/motion';
+import { FadeIn, nextLayout, Rise, Swap, tick } from '@/components/motion';
 import { PulseProgress } from '@/components/PulseProgress';
 import { TrendChart } from '@/components/TrendChart';
 import { TrimBar } from '@/components/TrimBar';
@@ -198,6 +198,7 @@ export default function Analyse() {
     const step = coarse.length > 1 ? coarse[1] - coarse[0] : 1;
     const guess = coarse.length * 2;
     const label1 = tr('脚下没认出，换骨架找人和起跳');
+    nextLayout();
     setPhase({ name: 'running', done: 0, total: guess, label: label1 });
     let pose: PoseReaderHandle;
     let wire;
@@ -250,6 +251,7 @@ export default function Analyse() {
     // The fine pass usually asks for about as many frames again; the bar is honest once it is known.
     const guess = req.frames.length * 2;
     const label0 = target ? tr('锁定运动员，粗扫整段') : tr('找运动员，粗扫整段');
+    nextLayout();
     setPhase({ name: 'running', done: 0, total: guess, label: label0 });
     try {
       const coarseFrames = await reader.current.read(req, (n) => setPhase({ name: 'running', done: n, total: guess, label: label0 }));
@@ -264,16 +266,21 @@ export default function Analyse() {
         const r = analyseFine(c.plan, fine);
         jumps = r.ok ? r.jumps : await byPose(video, r.problem);
       }
-      if (typeof jumps === 'string') return setPhase({ name: 'failed', problem: jumps });
+      if (typeof jumps === 'string') {
+        nextLayout();
+        return setPhase({ name: 'failed', problem: jumps });
+      }
       setEvents(
         jumps.map((j) =>
           j.marks.length === 3 ? { touchdown: j.marks[0], takeoff: j.marks[1], landing: j.marks[2], flags: j.flags } : { takeoff: j.marks[0], landing: j.marks[1], flags: j.flags },
         ),
       );
       setKeep([]);
+      nextLayout();
       setPhase({ name: 'done' });
       show(jumps[0].marks[0]);
     } catch {
+      nextLayout();
       setPhase({ name: 'failed', problem: 'error' });
     }
   }
@@ -369,7 +376,7 @@ export default function Analyse() {
         </View>
 
         {phase.name === 'setup' && (
-          <>
+          <FadeIn style={styles.setup}>
             <TrimBar
               total={total}
               span={span}
@@ -398,16 +405,20 @@ export default function Analyse() {
               </View>
             </View>
             {looksSlowMo && fps <= fileFps && <Text style={styles.warn}>{tr('这个视频是 {detectedFps} fps。如果是用 iPhone「慢动作」拍的，拍摄帧率选 240（120 fps 慢动作选 120）。', { detectedFps })}</Text>}
-          </>
+          </FadeIn>
         )}
 
-        {running && <PulseProgress progress={phase.done / phase.total} label={phase.label} />}
+        {running && (
+          <FadeIn>
+            <PulseProgress progress={phase.done / phase.total} label={phase.label} />
+          </FadeIn>
+        )}
 
         {phase.name === 'failed' && (
-          <View style={styles.card}>
+          <FadeIn style={styles.card}>
             <Text style={styles.cardTitle}>{PROBLEMS[phase.problem].what}</Text>
             <Text style={styles.muted}>{tr('建议：{advice}', { advice: PROBLEMS[phase.problem].advice })}</Text>
-          </View>
+          </FadeIn>
         )}
 
         {phase.name === 'done' && analysis && s && (
@@ -437,6 +448,7 @@ export default function Analyse() {
 
       <View style={styles.footer}>
         {queued > 0 && <Text style={styles.queued}>{tr('还有 {queued} 段视频，保存后接着分析下一段', { queued })}</Text>}
+        <Swap id={phase.name} style={styles.footerSteps}>
         {phase.name === 'setup' && <Button label={clip ? tr('开始分析') : tr('正在读取视频…')} onPress={analyse} disabled={!clip || total === 0} />}
         {phase.name === 'done' && (
           <>
@@ -444,7 +456,17 @@ export default function Analyse() {
             <Button label={tr('回放 · 导出视频')} variant="secondary" onPress={replay} />
           </>
         )}
-        {phase.name === 'failed' && <Button label={tr('重新选片段')} variant="secondary" onPress={() => setPhase({ name: 'setup' })} />}
+        {phase.name === 'failed' && (
+          <Button
+            label={tr('重新选片段')}
+            variant="secondary"
+            onPress={() => {
+              nextLayout();
+              setPhase({ name: 'setup' });
+            }}
+          />
+        )}
+        </Swap>
         {phase.name !== 'running' && def.capture.some((c) => c === 'flight' || c === 'contact') && (
           <Button label={tr('手动逐帧标')} variant="ghost" onPress={markByHand} />
         )}
@@ -592,6 +614,8 @@ function HistoryCard({ def, previous, today, verdict, te }: { def: MetricDef; pr
 }
 
 const styles = StyleSheet.create({
+  setup: { gap: 12 },
+  footerSteps: { gap: 6 },
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, gap: 12 },
   video: { height: 380, borderRadius: radius.card, overflow: 'hidden', backgroundColor: '#000' },
