@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/Icon';
-import { Rise } from '@/components/motion';
+import { nextLayout, Rise, Turn } from '@/components/motion';
 import { PulseProgress } from '@/components/PulseProgress';
 import { Button } from '@/components/ui';
 import { newSessionId } from '@/db/repo';
@@ -156,10 +156,15 @@ export default function Technique() {
         return (
           <Rise key={t.id} index={i}>
             <View style={styles.card}>
-              <Pressable accessibilityRole="button" accessibilityLabel={tr('展开第 {i} 条', { i: i + 1 })} onPress={() => setOpen(expanded ? null : t.id)} style={{ gap: 6 }}>
+              <Pressable accessibilityRole="button" accessibilityLabel={tr('展开第 {i} 条', { i: i + 1 })} onPress={() => {
+                nextLayout();
+                setOpen(expanded ? null : t.id);
+              }} style={{ gap: 6 }}>
                 <View style={styles.takeHead}>
                   <Text style={styles.muted}>{tr('{at} · {p} · {captureFps} 帧', { at: when(t.at), p: t.source === 'camera' ? tr('App 拍摄') : tr('导入'), captureFps: t.captureFps })}</Text>
-                  <Icon name={expanded ? 'chevronDown' : 'chevronRight'} size={16} color={colors.textMuted} />
+                  <Turn open={expanded} turned={90}>
+                    <Icon name="chevronRight" size={16} color={colors.textMuted} />
+                  </Turn>
                 </View>
                 <Text style={styles.cardTitle}>{styleText(t.style)}</Text>
                 {vz && (

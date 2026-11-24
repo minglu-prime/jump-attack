@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlockReason, blockLabel, RetestCard, SuggestionCard } from '@/components/blocks';
 import { Icon } from '@/components/Icon';
 import { AdjustmentNote, SessionItems, WeekStrip, type DayStatus } from '@/components/training';
+import { FadeIn } from '@/components/motion';
 import { Button, Card, LoadFailed } from '@/components/ui';
 import { newSessionId } from '@/db/repo';
 import { listPain } from '@/db/pain';
@@ -81,57 +82,60 @@ export default function Train() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content}>
-        {data ? (
-          <PlanView
-            data={data}
-            readiness={readiness}
-            advice={advice}
-            pain={pain}
-            loads={loads}
-            today={today}
-            selected={selected}
-            onSelect={setSelected}
-            starting={starting}
-            onDeload={async () => {
-              await insertDeload(db, data.plan, today);
-              await load();
-            }}
-            onSuggestion={async (accept) => {
-              if (!advice.suggestion) return;
-              setStarting(true);
-              try {
-                if (accept) await acceptBlockSuggestion(db, data, advice.suggestion, advice.diagnosis, today);
-                else await declineBlockSuggestion(db, data, advice.suggestion, today);
+      {/* Loading gives way to the page by fading, not by a hard cut. */}
+      <FadeIn style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content}>
+          {data ? (
+            <PlanView
+              data={data}
+              readiness={readiness}
+              advice={advice}
+              pain={pain}
+              loads={loads}
+              today={today}
+              selected={selected}
+              onSelect={setSelected}
+              starting={starting}
+              onDeload={async () => {
+                await insertDeload(db, data.plan, today);
                 await load();
-              } finally {
-                setStarting(false);
-              }
-            }}
-            onStart={async (date, makeUp) => {
-              setStarting(true);
-              try {
-                await beginWorkout(db, data, date, makeUp);
-                router.push({ pathname: '/workout/[date]', params: { date } });
-              } catch (e) {
-                Alert.alert(tr('无法开始训练'), String(e));
-              } finally {
-                setStarting(false);
-              }
-            }}
-          />
-        ) : (
-          <>
-            <Text style={text.title}>{tr('训练')}</Text>
-            <ReadinessCard readiness={readiness} loads={loads} />
-            <Card style={{ gap: 12 }}>
-              <Text style={text.section}>{tr('还没有训练计划')}</Text>
-              <Text style={text.muted}>{tr('选一个模板，按你的训练日生成每周的训练。每次练之前测一次 CMJ，状态差时自动减量。')}</Text>
-              <Button label={tr('选择训练计划')} onPress={() => router.push('/plan/new')} />
-            </Card>
-          </>
-        )}
-      </ScrollView>
+              }}
+              onSuggestion={async (accept) => {
+                if (!advice.suggestion) return;
+                setStarting(true);
+                try {
+                  if (accept) await acceptBlockSuggestion(db, data, advice.suggestion, advice.diagnosis, today);
+                  else await declineBlockSuggestion(db, data, advice.suggestion, today);
+                  await load();
+                } finally {
+                  setStarting(false);
+                }
+              }}
+              onStart={async (date, makeUp) => {
+                setStarting(true);
+                try {
+                  await beginWorkout(db, data, date, makeUp);
+                  router.push({ pathname: '/workout/[date]', params: { date } });
+                } catch (e) {
+                  Alert.alert(tr('无法开始训练'), String(e));
+                } finally {
+                  setStarting(false);
+                }
+              }}
+            />
+          ) : (
+            <>
+              <Text style={text.title}>{tr('训练')}</Text>
+              <ReadinessCard readiness={readiness} loads={loads} />
+              <Card style={{ gap: 12 }}>
+                <Text style={text.section}>{tr('还没有训练计划')}</Text>
+                <Text style={text.muted}>{tr('选一个模板，按你的训练日生成每周的训练。每次练之前测一次 CMJ，状态差时自动减量。')}</Text>
+                <Button label={tr('选择训练计划')} onPress={() => router.push('/plan/new')} />
+              </Card>
+            </>
+          )}
+        </ScrollView>
+      </FadeIn>
     </SafeAreaView>
   );
 }

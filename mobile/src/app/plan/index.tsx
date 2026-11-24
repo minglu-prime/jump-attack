@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FadeIn } from '@/components/motion';
 import { Button, Empty, LoadFailed, Loading } from '@/components/ui';
 import { endPlan } from '@/db/training';
 import { addDays, daysBetween, mondayOf, shortDate } from '@/domain/dates';
@@ -101,44 +102,47 @@ export default function PlanOverview() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={{ gap: 4 }}>
-          <Text style={text.heading}>{template.name}</Text>
-          <Text style={text.muted}>{template.summary}</Text>
-        </View>
-
-        {weeks.map(({ week, label, deload, sessions }) => (
-          <View key={week} style={[styles.week, week === currentWeek && { borderColor: colors.accent }]}>
-            <Text style={text.section}>{tr('第 {week} 周 · {p}', { week: week + 1, p: deload ? tr('减量（疲劳后插入）') : label })}</Text>
-            {sessions.map((p) => {
-              const w = byDate.get(p.date);
-              const status = w?.finishedAt ? tr('已完成') : w ? tr('进行中') : p.date === today ? tr('今天') : daysBetween(p.date, today) > 0 ? tr('未练') : '';
-              const color = w?.finishedAt ? colors.good : w ? colors.warn : p.date === today ? colors.accent : colors.textMuted;
-              const canOpen = daysBetween(p.date, today) >= 0;
-              return (
-                <Pressable
-                  key={p.date}
-                  accessibilityRole="button"
-                  disabled={!w}
-                  onPress={() => router.push({ pathname: '/workout/[date]', params: { date: p.date } })}
-                  style={styles.row}
-                >
-                  <Text style={styles.date}>{shortDate(p.date)}</Text>
-                  <Text style={[text.body, { flex: 1 }]}>
-                    {p.session.code} · {p.session.name}
-                  </Text>
-                  <Text style={[styles.status, { color }]}>{canOpen || w ? status : ''}</Text>
-                </Pressable>
-              );
-            })}
+      {/* Loading gives way to the page by fading, not by a hard cut. */}
+      <FadeIn style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.content}>
+          <View style={{ gap: 4 }}>
+            <Text style={text.heading}>{template.name}</Text>
+            <Text style={text.muted}>{template.summary}</Text>
           </View>
-        ))}
 
-        <View style={{ gap: 10, marginTop: 8 }}>
-          <Button label={tr('更换计划')} variant="secondary" onPress={() => router.push('/plan/new')} />
-          <Button label={tr('结束计划')} variant="ghost" onPress={confirmEnd} />
-        </View>
-      </ScrollView>
+          {weeks.map(({ week, label, deload, sessions }) => (
+            <View key={week} style={[styles.week, week === currentWeek && { borderColor: colors.accent }]}>
+              <Text style={text.section}>{tr('第 {week} 周 · {p}', { week: week + 1, p: deload ? tr('减量（疲劳后插入）') : label })}</Text>
+              {sessions.map((p) => {
+                const w = byDate.get(p.date);
+                const status = w?.finishedAt ? tr('已完成') : w ? tr('进行中') : p.date === today ? tr('今天') : daysBetween(p.date, today) > 0 ? tr('未练') : '';
+                const color = w?.finishedAt ? colors.good : w ? colors.warn : p.date === today ? colors.accent : colors.textMuted;
+                const canOpen = daysBetween(p.date, today) >= 0;
+                return (
+                  <Pressable
+                    key={p.date}
+                    accessibilityRole="button"
+                    disabled={!w}
+                    onPress={() => router.push({ pathname: '/workout/[date]', params: { date: p.date } })}
+                    style={styles.row}
+                  >
+                    <Text style={styles.date}>{shortDate(p.date)}</Text>
+                    <Text style={[text.body, { flex: 1 }]}>
+                      {p.session.code} · {p.session.name}
+                    </Text>
+                    <Text style={[styles.status, { color }]}>{canOpen || w ? status : ''}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+
+          <View style={{ gap: 10, marginTop: 8 }}>
+            <Button label={tr('更换计划')} variant="secondary" onPress={() => router.push('/plan/new')} />
+            <Button label={tr('结束计划')} variant="ghost" onPress={confirmEnd} />
+          </View>
+        </ScrollView>
+      </FadeIn>
     </SafeAreaView>
   );
 }
