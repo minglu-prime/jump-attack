@@ -45,6 +45,10 @@ export default function Attempts() {
   const [attempts, setAttempts] = useState<DunkAttempt[]>([]);
   const [rimText, setRimText] = useState<string | null>(null);
   const [ball, setBall] = useState<Ball | null>(null);
+  // The attempt just logged, which one tap takes back: a thumb that hit the wrong button needs no confirm.
+  const [logged, setJustLogged] = useState<{ id: number; outcome: Outcome; athleteId: number } | null>(null);
+  // Only for the athlete it was logged for: after switching athlete there is nothing of theirs to take back.
+  const justLogged = logged && logged.athleteId === current?.id ? logged : null;
   /** The jump height of each analysed attempt, by its analysis's trial id. */
   const [heights, setHeights] = useState<Record<number, Measured>>({});
   const [poseReady, setPoseReady] = useState(false);
@@ -80,10 +84,22 @@ export default function Attempts() {
   async function log(outcome: Outcome) {
     if (!current || rimCm == null || problem) return;
     try {
-      await addDunkAttempt(db, current.id, { rimCm, ball: ballNow, outcome });
+      const id = await addDunkAttempt(db, current.id, { rimCm, ball: ballNow, outcome });
+      setJustLogged({ id, outcome, athleteId: current.id });
       await load();
     } catch (e) {
       Alert.alert(tr('没记上'), String(e));
+    }
+  }
+
+  async function undo() {
+    if (!justLogged) return;
+    try {
+      await deleteDunkAttempt(db, justLogged.id);
+      setJustLogged(null);
+      await load();
+    } catch (e) {
+      Alert.alert(tr('没撤销成功'), String(e));
     }
   }
 
@@ -222,7 +238,16 @@ export default function Attempts() {
         )}
 
         <OutcomeButtons onPick={log} disabled={!!problem} />
-        <Text style={[text.caption, { textAlign: 'center' }]}>{tr('每试一次点一下，记错了在下面删掉。')}</Text>
+        {justLogged ? (
+          <View style={styles.logged}>
+            <Text style={[styles.loggedText, { color: OUTCOME_COLOR[justLogged.outcome] }]}>{tr('记了一次：{outcome}', { outcome: OUTCOME_NAME[justLogged.outcome] })}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={tr('撤销刚才这次')} hitSlop={8} onPress={undo}>
+              <Text style={styles.undo}>{tr('撤销')}</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <Text style={[text.caption, { textAlign: 'center' }]}>{tr('每试一次点一下，记错了在下面删掉。')}</Text>
+        )}
 
         {todays.length > 0 && (
           <Card style={{ gap: 4 }}>
@@ -244,6 +269,9 @@ export default function Attempts() {
 }
 
 const styles = StyleSheet.create({
+  logged: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 16, minHeight: 24 },
+  loggedText: { fontSize: 14, fontWeight: '600' },
+  undo: { color: colors.accent, fontSize: 14, fontWeight: '700' },
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: 16, gap: 12, paddingBottom: 40 },
   headline: { color: colors.text, fontSize: 24, fontWeight: '700' },

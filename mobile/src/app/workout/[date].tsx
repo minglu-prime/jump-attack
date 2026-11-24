@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
@@ -108,11 +108,21 @@ export default function WorkoutScreen() {
     if (entry) await logSet(db, workout.id, entry);
     else await unlogSet(db, workout.id, p.code, setNo);
     await reload();
+    // The note below is not a pop-up any more, so a screen reader is told about it.
     const v = entry?.mean_velocity;
     if (v == null) return;
     const others = sets.filter((s) => s.exercise_code === p.code && s.set_no !== setNo && s.mean_velocity != null).map((s) => s.mean_velocity!);
     const check = checkSet(v, suggested[p.code]?.minV ?? null, others.length ? Math.max(...others) : null);
-    if (check.stop) Alert.alert(tr('今天到这里为止'), tr('{why}。{name}剩下的组今天不做了，硬练只会积累疲劳。', { why: check.why, name: p.name }));
+    if (check.stop) AccessibilityInfo.announceForAccessibility([tr('今天到这里为止'), tr('{why}。{name}剩下的组今天不做了，硬练只会积累疲劳。', { why: check.why, name: p.name })].join(' '));
+  }
+
+  // Whether the exercise's latest set with a bar speed says to stop; shown on its card instead of a pop-up mid-session.
+  function stopWhy(p: Prescription): string | null {
+    const timed = sets.filter((s) => s.exercise_code === p.code && s.mean_velocity != null).sort((a, b) => a.set_no - b.set_no);
+    const last = timed.at(-1);
+    if (!last) return null;
+    const others = timed.filter((s) => s !== last).map((s) => s.mean_velocity!);
+    return checkSet(last.mean_velocity!, suggested[p.code]?.minV ?? null, others.length ? Math.max(...others) : null).why;
   }
 
   async function logWarmup(lift: string, kg: number, v: number) {
@@ -131,9 +141,14 @@ export default function WorkoutScreen() {
   async function finish() {
     const go = async () => {
       setFinishing(true);
-      await finishWorkout(db, workout.id);
-      await reload();
-      setFinishing(false);
+      try {
+        await finishWorkout(db, workout.id);
+        await reload();
+      } catch (e) {
+        Alert.alert(tr('没能完成训练'), String(e));
+      } finally {
+        setFinishing(false);
+      }
     };
     if (summary.setsDone < summary.setsPlanned) {
       Alert.alert(tr('结束训练？'), tr('还有 {setsPlanned} 组没打勾，会按已完成的记录。', { setsPlanned: summary.setsPlanned - summary.setsDone }), [
@@ -233,6 +248,12 @@ export default function WorkoutScreen() {
                 />
               );
             })}
+            {!done && stopWhy(p) && (
+              <View style={styles.stop}>
+                <Text style={styles.stopTitle}>{tr('今天到这里为止')}</Text>
+                <Text style={styles.dayLine}>{tr('{why}。{name}剩下的组今天不做了，硬练只会积累疲劳。', { why: stopWhy(p), name: p.name })}</Text>
+              </View>
+            )}
           </Card>
         ))}
       </ScrollView>
@@ -333,11 +354,13 @@ function SetRow({
   return (
     <View style={[styles.setRow, checked && styles.setRowDone, below && styles.setRowBelow]}>
       <Text style={styles.setNo}>{setNo}</Text>
-      <Field value={reps} onChange={setReps} placeholder={String(p.reps)} unit={p.perSide ? tr('次/侧') : tr('次')} editable={!checked && !locked} />
-      {loaded && <Field value={kg} onChange={setKg} placeholder={suggestedKg != null ? String(suggestedKg) : '—'} unit="kg" editable={!checked && !locked} decimal />}
-      {p.rpe != null && <Field value={rpe} onChange={setRpe} placeholder={formatRpe(p.rpe)} unit="RPE" editable={!checked && !locked} decimal />}
-      {tracksVelocity && <Field value={v} onChange={setV} placeholder={minV != null ? decimal(minV, 2) : '—'} unit="m/s" editable={!checked && !locked} decimal />}
-      <View style={{ flex: 1 }} />
+      {/* Up to four fields: on a phone they wrap onto a second line, so the tick never leaves the screen. */}
+      <View style={styles.fields}>
+        <Field value={reps} onChange={setReps} placeholder={String(p.reps)} unit={p.perSide ? tr('次/侧') : tr('次')} editable={!checked && !locked} />
+        {loaded && <Field value={kg} onChange={setKg} placeholder={suggestedKg != null ? String(suggestedKg) : '—'} unit="kg" editable={!checked && !locked} decimal />}
+        {p.rpe != null && <Field value={rpe} onChange={setRpe} placeholder={formatRpe(p.rpe)} unit="RPE" editable={!checked && !locked} decimal />}
+        {tracksVelocity && <Field value={v} onChange={setV} placeholder={minV != null ? decimal(minV, 2) : '—'} unit="m/s" editable={!checked && !locked} decimal />}
+      </View>
       <Pressable
         accessibilityRole="checkbox"
         accessibilityState={{ checked, disabled: locked }}
@@ -441,11 +464,15 @@ const styles = StyleSheet.create({
   dayLine: { color: colors.textSoft, fontSize: 12, lineHeight: 18 },
   warmup: { gap: 4, paddingBottom: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider },
   setRowBelow: { borderWidth: 1, borderColor: colors.warn },
+  stop: { borderRadius: radius.row, borderWidth: 1, borderColor: colors.warn, padding: 12, gap: 4 },
+  stopTitle: { color: colors.warn, fontSize: 13, fontWeight: '700' },
   setRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, paddingHorizontal: 8, borderRadius: radius.chip },
   setRowDone: { backgroundColor: colors.accentTile },
   setNo: { width: 18, color: colors.textMuted, fontFamily: fonts.numeric, fontSize: 16, textAlign: 'center' },
+  fields: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 10, rowGap: 6 },
   field: { flexDirection: 'row', alignItems: 'baseline', gap: 3 },
-  input: { minWidth: 44, height: 36, paddingHorizontal: 8, borderRadius: 10, backgroundColor: colors.surfaceRaised, color: colors.text, fontFamily: fonts.numeric, fontSize: 18, textAlign: 'center' },
+  // A fixed width: a web <input> is otherwise ~20 characters wide and pushes the row off the screen.
+  input: { width: 56, height: 36, paddingHorizontal: 8, borderRadius: 10, backgroundColor: colors.surfaceRaised, color: colors.text, fontFamily: fonts.numeric, fontSize: 18, textAlign: 'center' },
   unit: { color: colors.textMuted, fontSize: 11 },
   check: { width: 40, height: 40, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   checkDone: { backgroundColor: colors.accent, borderColor: colors.accent },

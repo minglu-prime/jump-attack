@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LimiterTiles } from '@/components/dunk';
 import { Icon } from '@/components/Icon';
 import { TouchChart } from '@/components/TouchChart';
-import { Empty } from '@/components/ui';
+import { Empty, LoadFailed, Loading } from '@/components/ui';
 import { loadDiagnosis } from '@/db/dunk';
 import { listMetricResults, sessionCounts, sessionTimings, type SessionResult } from '@/db/repo';
 import { touchOffsetFor } from '@/db/touch';
@@ -30,33 +30,47 @@ export default function History() {
   const [rows, setRows] = useState<Row[]>([]);
   const [diagnosis, setDiagnosis] = useState<DunkDiagnosis | null>(null);
   const [offset, setOffset] = useState<number | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!current) return;
+    try {
+      // Only metrics with data, in registry order; custom sprint distances aren't in the registry, so they come last.
+      const counts = await sessionCounts(db, current.id);
+      const known = METRICS.filter((m) => counts[m.code]);
+      const extra = Object.keys(counts)
+        .filter((c) => !known.some((m) => m.code === c))
+        .map(getMetric)
+        .filter((m): m is MetricDef => m != null);
+      const defs = [...known, ...extra];
+      const [nextRows, nextDiagnosis, nextOffset] = await Promise.all([
+        Promise.all(
+          defs.map(async (m) => ({
+            def: m,
+            color: metricColor(m),
+            results: await listMetricResults(db, current.id, m),
+            ...(m.category === 'speed' ? { timings: await sessionTimings(db, current.id, m.code) } : {}),
+          })),
+        ),
+        loadDiagnosis(db, current),
+        touchOffsetFor(db, current.id),
+      ]);
+      // All at once, so a read that fails half-way never leaves one athlete's rows beside another's diagnosis.
+      setRows(nextRows);
+      setDiagnosis(nextDiagnosis);
+      setOffset(nextOffset);
+      setLoaded(true);
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+    }
+  }, [db, current]);
 
   useFocusEffect(
     useCallback(() => {
-      if (!current) return;
-      (async () => {
-        // Only metrics with data, in registry order; custom sprint distances aren't in the registry, so they come last.
-        const counts = await sessionCounts(db, current.id);
-        const known = METRICS.filter((m) => counts[m.code]);
-        const extra = Object.keys(counts)
-          .filter((c) => !known.some((m) => m.code === c))
-          .map(getMetric)
-          .filter((m): m is MetricDef => m != null);
-        const defs = [...known, ...extra];
-        setRows(
-          await Promise.all(
-            defs.map(async (m) => ({
-              def: m,
-              color: metricColor(m),
-              results: await listMetricResults(db, current.id, m),
-              ...(m.category === 'speed' ? { timings: await sessionTimings(db, current.id, m.code) } : {}),
-            })),
-          ),
-        );
-        setDiagnosis(await loadDiagnosis(db, current));
-        setOffset(await touchOffsetFor(db, current.id));
-      })();
-    }, [db, current]),
+      load();
+    }, [load]),
   );
 
   const withData = rows.filter((r) => r.results.length > 0);
@@ -106,7 +120,10 @@ export default function History() {
 
         {diagnosis && <LimiterTiles diagnosis={diagnosis} sprint={sprintRow} />}
 
-        {withData.length === 0 && <Empty title={tr('还没有记录')} hint={tr('去首页做一次测试，成绩会出现在这里。')} />}
+        {error && <LoadFailed title={tr('历史没加载出来')} error={error} onRetry={load} />}
+        {!loaded && !error && <Loading />}
+
+        {loaded && withData.length === 0 && <Empty title={tr('还没有记录')} hint={tr('去首页做一次测试，成绩会出现在这里。')} />}
 
         {CATEGORIES.map((g) => {
           const groupRows = withData.filter((r) => r.def.category === g.key);

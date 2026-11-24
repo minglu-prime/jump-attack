@@ -116,3 +116,30 @@ it('does not save a profile number no one has, and says which one', async () => 
   await type(r.root, '篮筐高度（cm）', '');
   expect(pressable(r.root, '保存').props.disabled).toBe(false);
 });
+
+describe('saving the profile', () => {
+  const button = (r: ReactTestRenderer) => r.root.find((n) => typeof n.props.onPress === 'function' && n.findAllByType(Text).some((t) => ['保存', '已保存'].includes([t.props.children].flat().join(''))));
+
+  it('answers the press: 已保存 until the profile is edited again', async () => {
+    const r = await render();
+    await type(r.root, '体重（kg）', '80');
+    await act(async () => button(r).props.onPress());
+    expect(texts(r.root)).toContain('已保存');
+    expect(button(r).props.disabled).toBe(true);
+
+    await type(r.root, '体重（kg）', '81');
+    expect(texts(r.root)).not.toContain('已保存');
+    expect(button(r).props.disabled).toBe(false);
+  });
+
+  it('says why a save failed and lets it be tried again', async () => {
+    const repo = jest.requireActual('@/db/repo');
+    const spy = jest.spyOn(repo, 'updateAthlete').mockRejectedValueOnce(new Error('disk full'));
+    const r = await render();
+    await type(r.root, '体重（kg）', '82');
+    await act(async () => button(r).props.onPress());
+    expect(texts(r.root)).toContain('没保存上：Error: disk full');
+    expect(button(r).props.disabled).toBe(false);
+    spy.mockRestore();
+  });
+});

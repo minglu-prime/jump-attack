@@ -1,7 +1,7 @@
 // Drives the in-app camera for jump tests and VBT sets: the camera page in the WebView is replaced by messages like the
 // page's, so the flow runs from the camera coming up to a take handed on to the jump analysis or the bar tracking.
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { Text } from 'react-native';
+import { Alert, Text, type AlertButton } from 'react-native';
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 import { dropTake, dropTestTakes } from '@/media/takes';
@@ -167,4 +167,34 @@ it('says how to let the app use the camera', async () => {
   expect(texts(r.root)).toContain('相机权限');
   await press('返回');
   expect(mockRouter.back).toHaveBeenCalled();
+});
+
+it('asks before closing throws away a take, and closes straight away before filming', async () => {
+  await open({ to: '/measure/analyse', metric: 'cmj', session: 'cmj-1' });
+  await film(4);
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  await press('关闭');
+  expect(mockRouter.back).not.toHaveBeenCalled();
+  expect(alert).toHaveBeenCalledWith('放弃这段录像？', '录好的 4.0 秒不会保存。', expect.any(Array));
+  const buttons = alert.mock.calls[0][2] as AlertButton[];
+  await act(async () => buttons.find((b) => b.text === '放弃')!.onPress!());
+  expect(dropTake).toHaveBeenCalledWith(expect.stringMatching(/test-takes\/take-\d+\.mp4$/));
+  expect(mockRouter.back).toHaveBeenCalled();
+  alert.mockRestore();
+
+  await act(async () => r.unmount());
+  jest.clearAllMocks();
+  await open({ to: '/measure/analyse', metric: 'cmj', session: 'cmj-1' });
+  await press('关闭');
+  expect(mockRouter.back).toHaveBeenCalled();
+});
+
+it('also asks when recording was asked for but has not started yet', async () => {
+  await open({ to: '/measure/analyse', metric: 'cmj', session: 'cmj-1' });
+  await press('开始录像');
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  await press('关闭');
+  expect(mockRouter.back).not.toHaveBeenCalled();
+  expect(alert).toHaveBeenCalledWith('放弃这段录像？', '正在录的这段不会保存。', expect.any(Array));
+  alert.mockRestore();
 });

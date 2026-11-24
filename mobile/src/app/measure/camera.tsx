@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { captureGuide } from '@/components/capture/guides';
+import { leaveCamera } from '@/components/capture/leave';
 import { Icon } from '@/components/Icon';
 import { PoseCamera, type CameraErrorStage, type CameraInfo, type PoseCameraHandle, type Recorded } from '@/components/PoseCamera';
 import { Button } from '@/components/ui';
@@ -139,7 +140,7 @@ export default function TestCamera() {
       />
       <SafeAreaView style={StyleSheet.absoluteFill} edges={['left', 'right', 'top', 'bottom']} pointerEvents="box-none">
         <View style={styles.top} pointerEvents="box-none">
-          <Pressable accessibilityRole="button" accessibilityLabel={tr('关闭')} onPress={() => router.back()} style={styles.close}>
+          <Pressable accessibilityRole="button" accessibilityLabel={tr('关闭')} onPress={() => leaveCamera(rec, () => router.back())} style={styles.close}>
             <Icon name="close" size={22} color="#FFFFFF" />
           </Pressable>
           <View style={styles.topRight}>

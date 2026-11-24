@@ -26,6 +26,9 @@ import { colors, radius, text } from '@/theme';
 
 export default function Me() {
   const { current, reload } = useAthlete();
+  // The profile as it was just saved; the form says so until it is edited or replaced (an import, another athlete).
+  const [savedAs, setSavedAs] = useState<string | null>(null);
+  const shown = current ? JSON.stringify(current) : null;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -36,7 +39,17 @@ export default function Me() {
           <Athletes />
 
           {/* Keyed on the whole row so the form starts fresh when switching athlete or when an import replaces the profile. */}
-          {current && <ProfileForm key={JSON.stringify(current)} athlete={current} onSaved={reload} />}
+          {current && (
+            <ProfileForm
+              key={shown}
+              athlete={current}
+              saved={savedAs != null && savedAs === shown}
+              onSaved={async (athlete) => {
+                setSavedAs(JSON.stringify(athlete));
+                await reload();
+              }}
+            />
+          )}
 
           <LanguagePicker />
 
@@ -191,7 +204,7 @@ function Athletes() {
   );
 }
 
-function ProfileForm({ athlete, onSaved }: { athlete: Athlete; onSaved: () => Promise<void> }) {
+function ProfileForm({ athlete, saved, onSaved }: { athlete: Athlete; saved: boolean; onSaved: (saved: Athlete) => Promise<void> }) {
   const db = useSQLiteContext();
   const [name, setName] = useState(athleteName(athlete.name));
   const [mass, setMass] = useState(athlete.body_mass_kg?.toString() ?? '');
@@ -202,6 +215,12 @@ function ProfileForm({ athlete, onSaved }: { athlete: Athlete; onSaved: () => Pr
   const [clearance, setClearance] = useState(athlete.dunk_clearance_cm?.toString() ?? '');
   const [goal, setGoal] = useState(athlete.goal_date ?? '');
   const [saving, setSaving] = useState(false);
+  const [edited, setEdited] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const edit = (set: (v: string) => void) => (v: string) => {
+    set(v);
+    setEdited(true);
+  };
   const goalDate = parseGoalDate(goal);
   const profile = readProfile({ mass, reach, leg, squat, rim, clearance });
   const numbers = profile.ok ? profile.values : null;
@@ -212,30 +231,38 @@ function ProfileForm({ athlete, onSaved }: { athlete: Athlete; onSaved: () => Pr
   async function save() {
     if (!name.trim() || !goalDate.ok || !numbers) return;
     setSaving(true);
-    // A new weight goes into the history too, so tests are read against the mass of their own week.
-    const kg = numbers.body_mass_kg;
-    if (kg != null && (kg !== athlete.body_mass_kg || (await listBodyMass(db, athlete.id)).length === 0)) {
-      await recordBodyMass(db, athlete.id, kg, toISODate(new Date()));
+    setSaveError(null);
+    try {
+      // A new weight goes into the history too, so tests are read against the mass of their own week.
+      const kg = numbers.body_mass_kg;
+      if (kg != null && (kg !== athlete.body_mass_kg || (await listBodyMass(db, athlete.id)).length === 0)) {
+        await recordBodyMass(db, athlete.id, kg, toISODate(new Date()));
+      }
+      const next = {
+        ...athlete,
+        // The default athlete keeps its stored name unless it was renamed, so it still reads right after a language switch.
+        name: name.trim() === athleteName(athlete.name) ? athlete.name : name.trim(),
+        ...numbers,
+        goal_date: goalDate.date,
+      };
+      await updateAthlete(db, next);
+      await onSaved(next);
+    } catch (e) {
+      setSaveError(tr('没保存上：{e}', { e: String(e) }));
+    } finally {
+      setSaving(false);
     }
-    await updateAthlete(db, {
-      ...athlete,
-      // The default athlete keeps its stored name unless it was renamed, so it still reads right after a language switch.
-      name: name.trim() === athleteName(athlete.name) ? athlete.name : name.trim(),
-      ...numbers,
-      goal_date: goalDate.date,
-    });
-    await onSaved();
-    setSaving(false);
   }
+  const justSaved = saved && !edited;
 
   return (
     <View style={{ gap: 10 }}>
       <Text style={text.section}>{tr('档案')}</Text>
-      <Field label={tr('名字')} value={name} onChangeText={setName} />
-      <Field label={tr('体重（kg）')} value={mass} onChangeText={setMass} keyboardType="decimal-pad" />
-      <Field label={tr('站立摸高（cm）')} value={reach} onChangeText={setReach} keyboardType="decimal-pad" />
-      <Field label={tr('腿长（cm）· 踮脚站立，大转子到脚尖')} value={leg} onChangeText={setLeg} keyboardType="decimal-pad" />
-      <Field label={tr('90° 下蹲时大转子离地（cm）')} value={squat} onChangeText={setSquat} keyboardType="decimal-pad" />
+      <Field label={tr('名字')} value={name} onChangeText={edit(setName)} />
+      <Field label={tr('体重（kg）')} value={mass} onChangeText={edit(setMass)} keyboardType="decimal-pad" />
+      <Field label={tr('站立摸高（cm）')} value={reach} onChangeText={edit(setReach)} keyboardType="decimal-pad" />
+      <Field label={tr('腿长（cm）· 踮脚站立，大转子到脚尖')} value={leg} onChangeText={edit(setLeg)} keyboardType="decimal-pad" />
+      <Field label={tr('90° 下蹲时大转子离地（cm）')} value={squat} onChangeText={edit(setSquat)} keyboardType="decimal-pad" />
       <Text style={styles.footnote}>
         {hpo != null
           ? tr('蹬伸距离 {hpo} cm，用于力-速度曲线。', { hpo: Math.round(hpo * 100) })
@@ -244,15 +271,16 @@ function ProfileForm({ athlete, onSaved }: { athlete: Athlete; onSaved: () => Pr
             : tr('后两项用于力-速度曲线：大转子是大腿外侧最突出的骨点，下蹲到膝关节 90°、脚跟着地时量。')}
       </Text>
       <Text style={[text.section, { paddingTop: 8 }]}>{tr('扣篮目标')}</Text>
-      <Field label={tr('篮筐高度（cm）')} value={rim} onChangeText={setRim} keyboardType="decimal-pad" placeholder={String(RIM_CM)} />
-      <Field label={tr('过筐余量（cm）· 手要高出篮筐多少才扣得进')} value={clearance} onChangeText={setClearance} keyboardType="decimal-pad" placeholder={String(CLEARANCE_CM)} />
+      <Field label={tr('篮筐高度（cm）')} value={rim} onChangeText={edit(setRim)} keyboardType="decimal-pad" placeholder={String(RIM_CM)} />
+      <Field label={tr('过筐余量（cm）· 手要高出篮筐多少才扣得进')} value={clearance} onChangeText={edit(setClearance)} keyboardType="decimal-pad" placeholder={String(CLEARANCE_CM)} />
       <Text style={styles.footnote}>{tr('扣篮线 {rim} cm。单手能抓住球约需高出篮筐 15 cm；手小要托球或想双手扣，余量再加大。', { rim: dunkLine(numbers?.rim_height_cm, numbers?.dunk_clearance_cm) })}</Text>
-      <Field label={tr('目标日 · 哪天前要扣进')} value={goal} onChangeText={setGoal} placeholder="2026-12-01" autoCapitalize="none" autoCorrect={false} />
+      <Field label={tr('目标日 · 哪天前要扣进')} value={goal} onChangeText={edit(setGoal)} placeholder="2026-12-01" autoCapitalize="none" autoCorrect={false} />
       <Text style={[styles.footnote, !goalDate.ok && { color: colors.warn }]}>
         {goalDate.ok ? tr('计划按它倒推：不到 6 周不再开力量块，最后 10 天量减半，当天测摸高、试扣。') : goalDate.problem}
       </Text>
       {!profile.ok && <Text style={[styles.footnote, { color: colors.warn }]}>{profile.problem}</Text>}
-      <Button label={tr('保存')} onPress={save} busy={saving} disabled={!name.trim() || !goalDate.ok || !profile.ok} />
+      {saveError && <Text style={[styles.footnote, { color: colors.warn }]}>{saveError}</Text>}
+      <Button label={justSaved ? tr('已保存') : tr('保存')} onPress={save} busy={saving} disabled={justSaved || !name.trim() || !goalDate.ok || !profile.ok} />
     </View>
   );
 }

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View, type PressableProps, type ViewStyle } from 'react-native';
 
 import { PressScale } from '@/components/motion';
+import { tr } from '@/i18n';
 import { colors, radius } from '@/theme';
 
 type ButtonProps = Omit<PressableProps, 'style' | 'children'> & {
@@ -45,6 +46,28 @@ export function Empty({ title, hint }: { title: string; hint?: string }) {
     <View style={styles.empty}>
       <Text style={styles.emptyTitle}>{title}</Text>
       {hint ? <Text style={styles.emptyHint}>{hint}</Text> : null}
+    </View>
+  );
+}
+
+/** Shown while a screen's data is read, so loading never reads as a blank page or as "no records". */
+export function Loading() {
+  return (
+    <View style={styles.empty} accessible accessibilityRole="progressbar" accessibilityLabel={tr('正在加载')}>
+      <ActivityIndicator color={colors.accent} />
+    </View>
+  );
+}
+
+/** A read that failed: what failed, the error itself, and the way to try again. */
+export function LoadFailed({ title, error, onRetry }: { title: string; error: string; onRetry: () => void }) {
+  return (
+    <View style={styles.empty}>
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text selectable style={styles.emptyHint}>
+        {error}
+      </Text>
+      <Button label={tr('重试')} accessibilityLabel={tr('重试')} variant="secondary" onPress={onRetry} style={{ marginTop: 10 }} />
     </View>
   );
 }
