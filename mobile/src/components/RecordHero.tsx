@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 import { cheer, useReduceMotion } from '@/components/motion';
@@ -18,15 +18,13 @@ const RAY_PATH = Array.from({ length: RAYS }, (_, i) => {
 }).join('');
 
 /**
- * The result screen's hero when a test beats every earlier session: a street-poster moment. A flash, a sunburst
- * opening behind, the number slamming in and shaking, a 新纪录 stamp and a sticker with the margin, plus a success
- * buzz. Shows the end state at once when the phone asks for less motion.
+ * The result screen's hero when a test beats every earlier session: a street-poster moment. A sunburst opening
+ * behind, the number settling in from a little larger, a 新纪录 stamp and a sticker with the margin, plus a success
+ * buzz: one firm beat, no flash or shake. Shows the end state at once when the phone asks for less motion.
  */
 export function RecordHero({ label, value, unit, gain }: { label: string; value: string; unit: string; gain: string }) {
   const reduce = useReduceMotion();
   const [p] = useState(() => new Animated.Value(0));
-  const [shake] = useState(() => new Animated.Value(0));
-  const [flash] = useState(() => new Animated.Value(0));
   useEffect(() => {
     if (reduce == null) return;
     cheer();
@@ -34,20 +32,11 @@ export function RecordHero({ label, value, unit, gain }: { label: string; value:
       p.setValue(1);
       return;
     }
-    const a = Animated.parallel([
-      Animated.sequence([
-        Animated.timing(flash, { toValue: 1, duration: 90, useNativeDriver: true }),
-        Animated.timing(flash, { toValue: 0, duration: 520, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-      ]),
-      Animated.spring(p, { toValue: 1, speed: 10, bounciness: 12, useNativeDriver: true }),
-      Animated.sequence([
-        Animated.delay(380),
-        ...[1, -1, 0.6, -0.4, 0].map((x) => Animated.timing(shake, { toValue: x, duration: 55, useNativeDriver: true })),
-      ]),
-    ]);
+    // A touch of overshoot is kept here, the one place that celebrates; everything else in the app settles flat.
+    const a = Animated.spring(p, { toValue: 1, stiffness: 260, damping: 20, mass: 1, useNativeDriver: true });
     a.start();
     return () => a.stop();
-  }, [reduce, p, shake, flash]);
+  }, [reduce, p]);
 
   const late = (from: number) => p.interpolate({ inputRange: [0, from, 1], outputRange: [0, 0, 1], extrapolate: 'clamp' });
   return (
@@ -59,12 +48,11 @@ export function RecordHero({ label, value, unit, gain }: { label: string; value:
       </Animated.View>
       <Animated.Text style={[styles.stamp, { opacity: late(0.3), transform: [{ rotate: '-6deg' }, { scale: late(0.3).interpolate({ inputRange: [0, 1], outputRange: [2, 1] }) }] }]}>{tr('新纪录')}</Animated.Text>
       <Text style={styles.label}>{label}</Text>
-      <Animated.View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, transform: [{ translateX: shake.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] }) }, { scale: p.interpolate({ inputRange: [0, 1], outputRange: [2.4, 1] }) }] }}>
+      <Animated.View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, transform: [{ scale: p.interpolate({ inputRange: [0, 1], outputRange: [1.25, 1] }) }] }}>
         <Text style={styles.value}>{value}</Text>
         <Text style={styles.unit}>{unit}</Text>
       </Animated.View>
       <Animated.Text style={[styles.sticker, { opacity: late(0.5), transform: [{ rotate: late(0.5).interpolate({ inputRange: [0, 1], outputRange: ['50deg', '4deg'] }) }, { scale: late(0.5) }] }]}>{gain}</Animated.Text>
-      <Animated.View pointerEvents="none" style={[styles.flash, { opacity: flash }]} />
     </View>
   );
 }
@@ -77,5 +65,4 @@ const styles = StyleSheet.create({
   value: { color: colors.accent, fontFamily: fonts.numericBold, fontSize: 112, lineHeight: 116 },
   unit: { color: colors.accent, fontFamily: fonts.numeric, fontSize: 26 },
   sticker: { color: colors.onAccent, backgroundColor: colors.rim, fontFamily: fonts.numericBold, fontSize: 24, paddingHorizontal: 12, paddingVertical: 2, overflow: 'hidden', marginTop: 4 },
-  flash: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: colors.surface },
 });
