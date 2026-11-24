@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlockReason, blockLabel, RetestCard, SuggestionCard } from '@/components/blocks';
 import { Icon } from '@/components/Icon';
 import { AdjustmentNote, SessionItems, WeekStrip, type DayStatus } from '@/components/training';
-import { Button, Card } from '@/components/ui';
+import { Button, Card, LoadFailed } from '@/components/ui';
 import { newSessionId } from '@/db/repo';
 import { listPain } from '@/db/pain';
 import { insertDeload } from '@/db/training';
@@ -36,18 +36,24 @@ export default function Train() {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [selected, setSelected] = useState<ISODate>(today);
   const [starting, setStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!current) return;
-    const [data, readiness, pain, loads] = await Promise.all([
-      loadTraining(db, current.id),
-      loadReadiness(db, current.id, todayISO()),
-      listPain(db, current.id),
-      loadTrainingLoads(db, current.id),
-    ]);
-    const advice = data ? await loadBlockAdvice(db, current, data, todayISO()) : { diagnosis: null, suggestion: null };
-    const notes = loads.map((l) => loadNote(l.name, l.entries, todayISO())).filter((n): n is LoadLine => n != null);
-    setLoaded({ data, readiness, advice, pain, loads: notes });
+    try {
+      const [data, readiness, pain, loads] = await Promise.all([
+        loadTraining(db, current.id),
+        loadReadiness(db, current.id, todayISO()),
+        listPain(db, current.id),
+        loadTrainingLoads(db, current.id),
+      ]);
+      const advice = data ? await loadBlockAdvice(db, current, data, todayISO()) : { diagnosis: null, suggestion: null };
+      const notes = loads.map((l) => loadNote(l.name, l.entries, todayISO())).filter((n): n is LoadLine => n != null);
+      setLoaded({ data, readiness, advice, pain, loads: notes });
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+    }
   }, [db, current]);
 
   useFocusEffect(
@@ -56,6 +62,13 @@ export default function Train() {
     }, [load]),
   );
 
+  if (error) {
+    return (
+      <SafeAreaView style={[styles.screen, styles.center]}>
+        <LoadFailed title={tr('训练没加载出来')} error={error} onRetry={load} />
+      </SafeAreaView>
+    );
+  }
   if (!loaded) {
     return (
       <SafeAreaView style={[styles.screen, styles.center]}>

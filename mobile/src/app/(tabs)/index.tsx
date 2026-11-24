@@ -1,7 +1,7 @@
 import { Link, router, useFocusEffect, type Href } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DayStateRow } from '@/components/dunk';
@@ -11,7 +11,7 @@ import { PressScale, Rise } from '@/components/motion';
 import { ScoreScale } from '@/components/ScoreScale';
 import { ReachHero } from '@/components/ReachHero';
 import { AdjustmentNote } from '@/components/training';
-import { Button, Card } from '@/components/ui';
+import { Button, Card, LoadFailed, Loading } from '@/components/ui';
 import { loadDiagnosis } from '@/db/dunk';
 import { listDunkAttempts } from '@/db/dunkAttempts';
 import { listPain, setPain } from '@/db/pain';
@@ -91,15 +91,7 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
-        {error ? (
-          <Card style={{ gap: 12 }}>
-            <Text style={text.section}>{tr('首页没加载出来')}</Text>
-            <Text style={text.muted}>{error}</Text>
-            <Button label={tr('重试')} accessibilityLabel={tr('重试')} variant="secondary" onPress={load} />
-          </Card>
-        ) : (
-          !goal && <ActivityIndicator color={colors.accent} style={{ paddingVertical: 48 }} />
-        )}
+        {error ? <LoadFailed title={tr('首页没加载出来')} error={error} onRetry={load} /> : !goal && <Loading />}
         {goal && (
           <View style={styles.goal}>
             <ReachHero diagnosis={goal.diagnosis} standingReach={current?.standing_reach_cm ?? null} name={current?.name ?? ''} onSwitchAthlete={() => router.push('/me')} />

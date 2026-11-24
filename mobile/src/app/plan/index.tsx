@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Empty } from '@/components/ui';
+import { Button, Empty, LoadFailed, Loading } from '@/components/ui';
 import { endPlan } from '@/db/training';
 import { addDays, daysBetween, mondayOf, shortDate } from '@/domain/dates';
 import { BLOCKS } from '@/domain/dunk';
@@ -18,19 +18,40 @@ export default function PlanOverview() {
   const db = useSQLiteContext();
   const { current } = useAthlete();
   const [data, setData] = useState<TrainingData | null | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!current) return;
-      let alive = true;
-      loadTraining(db, current.id).then((d) => alive && setData(d));
-      return () => {
-        alive = false;
-      };
-    }, [db, current]),
-  );
+  const load = useCallback(() => {
+    if (!current) return;
+    let alive = true;
+    loadTraining(db, current.id).then(
+      (d) => {
+        if (!alive) return;
+        setData(d);
+        setError(null);
+      },
+      (e) => alive && setError(String(e)),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [db, current]);
 
-  if (data === undefined) return null;
+  useFocusEffect(load);
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <LoadFailed title={tr('计划没加载出来')} error={error} onRetry={load} />
+      </SafeAreaView>
+    );
+  }
+  if (data === undefined) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <Loading />
+      </SafeAreaView>
+    );
+  }
   if (data === null) {
     return (
       <SafeAreaView style={styles.screen}>
