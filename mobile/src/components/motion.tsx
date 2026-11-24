@@ -7,8 +7,9 @@ import { motion } from '@/theme';
 /** The one curve every transition eases out on (theme `motion.ease`). */
 export const ease = Easing.bezier(...motion.ease);
 
-// The setting, kept current for code that runs outside a component (nextLayout). Off until the phone says otherwise.
-let reduceMotionNow = false;
+// The setting, kept current for code that runs outside a component (nextLayout). Unknown (null) until the phone
+// answers, and treated as "less motion" until then: when in doubt, nothing moves.
+let reduceMotionNow: boolean | null = null;
 AccessibilityInfo.isReduceMotionEnabled?.()
   ?.then((r) => {
     reduceMotionNow = r;
@@ -41,7 +42,7 @@ export function useReduceMotion(): boolean | null {
  * less motion. The web has no layout animation, so there it simply jumps.
  */
 export function nextLayout() {
-  if (reduceMotionNow) return;
+  if (reduceMotionNow !== false) return;
   LayoutAnimation.configureNext({
     duration: motion.layout,
     create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
@@ -120,8 +121,9 @@ export function Swap({ id, children, pop, style }: { id: string | number | boole
   const [p] = useState(() => new Animated.Value(1));
   const first = useRef(id);
   useEffect(() => {
-    if (first.current === id || reduce !== false) return;
+    if (first.current === id) return;
     first.current = id;
+    if (reduce !== false) return;
     p.setValue(0);
     const a = Animated.timing(p, { toValue: 1, duration: motion.swap, easing: ease, useNativeDriver: true });
     a.start();
@@ -160,8 +162,14 @@ export function PressScale({ children, style, haptic = true, onPress, onPressIn,
   const reduce = useReduceMotion();
   const [s] = useState(() => new Animated.Value(1));
   const [dim, setDim] = useState(false);
+  // Less motion asked for while pressed (or the setting not known yet): no button is ever left shrunk.
+  useEffect(() => {
+    if (reduce === false) return;
+    s.stopAnimation();
+    s.setValue(1);
+  }, [reduce, s]);
   const to = (v: number) => {
-    if (reduce) {
+    if (reduce !== false) {
       setDim(v !== 1);
       return;
     }

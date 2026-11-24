@@ -3,7 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 import { motion } from '@/theme';
 
-import { CountUp, ease, FadeIn, PressScale, Rise } from '../motion';
+import { CountUp, ease, FadeIn, PressScale, Rise, Swap } from '../motion';
 
 const mockSelection = jest.fn(() => Promise.resolve());
 jest.mock('expo-haptics', () => ({ selectionAsync: () => mockSelection() }));
@@ -156,4 +156,55 @@ describe('one motion language', () => {
     await act(async () => listener!({ value: 271.46 }));
     expect(r.root.findByType(Text).props.children).toBe('271 cm');
   });
+});
+
+describe('Swap', () => {
+  const swap = (id: string) => (
+    <Swap id={id}>
+      <Text>{id}</Text>
+    </Swap>
+  );
+
+  it('shows the first state as it is, and fades in each later one', async () => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+    const timing = jest.spyOn(Animated, 'timing');
+    let r!: ReactTestRenderer;
+    await act(async () => {
+      r = create(swap('保存'));
+    });
+    expect(opacityOf(r)).toBe(1);
+    expect(timing).not.toHaveBeenCalled();
+
+    await act(async () => r.update(swap('busy')));
+    expect(opacityOf(r)).toBe(0);
+    expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ toValue: 1, duration: motion.swap, easing: ease }));
+  });
+
+  it('never fades with less motion, not even a change seen while it was on', async () => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    const timing = jest.spyOn(Animated, 'timing');
+    let r!: ReactTestRenderer;
+    await act(async () => {
+      r = create(swap('保存'));
+    });
+    await act(async () => r.update(swap('busy')));
+    expect(opacityOf(r)).toBe(1);
+    expect(timing).not.toHaveBeenCalled();
+  });
+});
+
+it('treats a Reduce Motion setting not known yet as on: a press dims, nothing shrinks', async () => {
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockReturnValue(new Promise(() => {}));
+  const spring = jest.spyOn(Animated, 'spring');
+  let r!: ReactTestRenderer;
+  await act(async () => {
+    r = create(
+      <PressScale accessibilityLabel="保存">
+        <Text>保存</Text>
+      </PressScale>,
+    );
+  });
+  const button = r.root.findAll((n) => n.type !== PressScale && typeof n.props.onPressIn === 'function')[0];
+  await act(async () => button.props.onPressIn({}));
+  expect(spring).not.toHaveBeenCalled();
 });

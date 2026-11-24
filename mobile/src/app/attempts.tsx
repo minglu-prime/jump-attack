@@ -85,8 +85,8 @@ export default function Attempts() {
     if (!current || rimCm == null || problem) return;
     try {
       const id = await addDunkAttempt(db, current.id, { rimCm, ball: ballNow, outcome });
-      setJustLogged({ id, outcome, athleteId: current.id });
       nextLayout();
+      setJustLogged({ id, outcome, athleteId: current.id });
       await load();
     } catch (e) {
       Alert.alert(tr('没记上'), String(e));
@@ -97,8 +97,8 @@ export default function Attempts() {
     if (!justLogged) return;
     try {
       await deleteDunkAttempt(db, justLogged.id);
-      setJustLogged(null);
       nextLayout();
+      setJustLogged(null);
       await load();
     } catch (e) {
       Alert.alert(tr('没撤销成功'), String(e));
