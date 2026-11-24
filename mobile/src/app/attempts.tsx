@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
 import { KeyboardDoneBar } from '@/components/KeyboardDoneBar';
-import { PressScale } from '@/components/motion';
+import { FadeIn, nextLayout, PressScale } from '@/components/motion';
 import { OUTCOME_COLOR, OutcomeButtons } from '@/components/OutcomeButtons';
 import { Button, Card } from '@/components/ui';
 import { addDunkAttempt, deleteDunkAttempt, listDunkAttempts } from '@/db/dunkAttempts';
@@ -86,6 +86,7 @@ export default function Attempts() {
     try {
       const id = await addDunkAttempt(db, current.id, { rimCm, ball: ballNow, outcome });
       setJustLogged({ id, outcome, athleteId: current.id });
+      nextLayout();
       await load();
     } catch (e) {
       Alert.alert(tr('没记上'), String(e));
@@ -97,6 +98,7 @@ export default function Attempts() {
     try {
       await deleteDunkAttempt(db, justLogged.id);
       setJustLogged(null);
+      nextLayout();
       await load();
     } catch (e) {
       Alert.alert(tr('没撤销成功'), String(e));
@@ -112,6 +114,7 @@ export default function Attempts() {
         style: 'destructive',
         onPress: async () => {
           await deleteDunkAttempt(db, a.id);
+          nextLayout();
           await load();
         },
       },
@@ -239,12 +242,12 @@ export default function Attempts() {
 
         <OutcomeButtons onPick={log} disabled={!!problem} />
         {justLogged ? (
-          <View style={styles.logged}>
+          <FadeIn key={justLogged.id} style={styles.logged}>
             <Text style={[styles.loggedText, { color: OUTCOME_COLOR[justLogged.outcome] }]}>{tr('记了一次：{outcome}', { outcome: OUTCOME_NAME[justLogged.outcome] })}</Text>
             <Pressable accessibilityRole="button" accessibilityLabel={tr('撤销刚才这次')} hitSlop={8} onPress={undo}>
               <Text style={styles.undo}>{tr('撤销')}</Text>
             </Pressable>
-          </View>
+          </FadeIn>
         ) : (
           <Text style={[text.caption, { textAlign: 'center' }]}>{tr('每试一次点一下，记错了在下面删掉。')}</Text>
         )}

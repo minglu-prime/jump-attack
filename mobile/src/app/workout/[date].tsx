@@ -6,6 +6,7 @@ import { AccessibilityInfo, Alert, Pressable, ScrollView, StyleSheet, Text, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
+import { FadeIn, nextLayout, Swap } from '@/components/motion';
 import { ScoreScale } from '@/components/ScoreScale';
 import { AdjustmentNote } from '@/components/training';
 import { Button, Card, Empty } from '@/components/ui';
@@ -107,6 +108,8 @@ export default function WorkoutScreen() {
     Haptics.selectionAsync();
     if (entry) await logSet(db, workout.id, entry);
     else await unlogSet(db, workout.id, p.code, setNo);
+    // A stop note may appear or go: the cards below ease to their new place.
+    nextLayout();
     await reload();
     // The note below is not a pop-up any more, so a screen reader is told about it.
     const v = entry?.mean_velocity;
@@ -143,6 +146,8 @@ export default function WorkoutScreen() {
       setFinishing(true);
       try {
         await finishWorkout(db, workout.id);
+        // The summary opens at the top and the footer turns into 返回: both ease in rather than jump.
+        nextLayout();
         await reload();
       } catch (e) {
         Alert.alert(tr('没能完成训练'), String(e));
@@ -249,10 +254,10 @@ export default function WorkoutScreen() {
               );
             })}
             {!done && stopWhy(p) && (
-              <View style={styles.stop}>
+              <FadeIn style={styles.stop}>
                 <Text style={styles.stopTitle}>{tr('今天到这里为止')}</Text>
                 <Text style={styles.dayLine}>{tr('{why}。{name}剩下的组今天不做了，硬练只会积累疲劳。', { why: stopWhy(p), name: p.name })}</Text>
-              </View>
+              </FadeIn>
             )}
           </Card>
         ))}
@@ -369,7 +374,9 @@ function SetRow({
         onPress={press}
         style={[styles.check, checked && styles.checkDone]}
       >
-        <Icon name="check" size={18} strokeWidth={3} color={checked ? colors.onAccent : colors.textFaint} />
+        <Swap id={checked} pop>
+          <Icon name="check" size={18} strokeWidth={3} color={checked ? colors.onAccent : colors.textFaint} />
+        </Swap>
       </Pressable>
     </View>
   );
