@@ -85,8 +85,10 @@ function Running({ startAt, lapM, laps, onLap, onStop }: { startAt: number; lapM
     return () => clearTimeout(id);
   }, [over, onStop]);
 
+  const stop = () => confirmStop(onStop, tr('不足 12 分钟的距离没法估算 VO2max，下一页可以手动填完整成绩。'));
+
   return (
-    <RunningScreen>
+    <RunningScreen onBack={stop}>
       <SafeAreaView style={runStyles.screen}>
         <View style={[runStyles.body, { justifyContent: 'center' }]}>
           <Text style={runStyles.label}>{t < 0 ? tr('准备起跑') : over ? tr('时间到') : tr('剩余时间')}</Text>
@@ -115,7 +117,7 @@ function Running({ startAt, lapM, laps, onLap, onStop }: { startAt: number; lapM
           )}
         </View>
         <View style={runStyles.footer}>
-          <Button label={tr('提前结束')} variant="secondary" style={{ flex: 1 }} onPress={() => confirmStop(onStop, tr('不足 12 分钟的距离没法估算 VO2max，下一页可以手动填完整成绩。'))} />
+          <Button label={tr('提前结束')} variant="secondary" style={{ flex: 1 }} onPress={stop} />
         </View>
       </SafeAreaView>
     </RunningScreen>

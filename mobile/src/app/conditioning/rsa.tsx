@@ -100,8 +100,10 @@ function Running({ onDone }: { onDone: (times: number[]) => void }) {
     setGoAt(Date.now() + RECOVERY_S * 1000);
   }
 
+  const stop = () => confirmStop(() => onDone(times), tr('已完成的趟数会带到下一页，可以补填或修改。'));
+
   return (
-    <RunningScreen>
+    <RunningScreen onBack={stop}>
       <SafeAreaView style={runStyles.screen}>
         <View style={runStyles.body}>
           <Text style={runStyles.label}>{tr('第 {sprintNo} / {SPRINTS} 趟 · {p}', { sprintNo, SPRINTS, p: sprinting ? tr('冲刺中') : times.length ? tr('间歇') : tr('准备') })}</Text>
@@ -124,7 +126,7 @@ function Running({ onDone }: { onDone: (times: number[]) => void }) {
           </Pressable>
         </View>
         <View style={runStyles.footer}>
-          <Button label={tr('结束测试')} variant="secondary" style={{ flex: 1 }} onPress={() => confirmStop(() => onDone(times), tr('已完成的趟数会带到下一页，可以补填或修改。'))} />
+          <Button label={tr('结束测试')} variant="secondary" style={{ flex: 1 }} onPress={stop} />
         </View>
       </SafeAreaView>
     </RunningScreen>

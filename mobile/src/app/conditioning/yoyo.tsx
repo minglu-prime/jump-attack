@@ -84,8 +84,10 @@ function Running({ startAt, onStop }: { startAt: number; onStop: (completed: num
   const phaseColor = t < 0 || state.phase === 'rest' ? colors.good : colors.accent;
   const toBeep = t < 0 ? -t : state.toBeep;
 
+  const stop = () => confirmStop(() => onStop(yoyoCompletedAt((Date.now() - startAt) / 1000)));
+
   return (
-    <RunningScreen>
+    <RunningScreen onBack={stop}>
       <SafeAreaView style={runStyles.screen}>
         <View style={[runStyles.body, { justifyContent: 'center' }]}>
           <Text style={runStyles.label}>{tr('{p} · 第 {n} 趟 · {speedKmh} km/h', { p: state.phase === 'rest' || t < 0 ? tr('下一趟') : tr('当前'), n: shuttle.n, speedKmh: shuttle.speedKmh })}</Text>
@@ -104,7 +106,7 @@ function Running({ startAt, onStop }: { startAt: number; onStop: (completed: num
           </View>
         </View>
         <View style={runStyles.footer}>
-          <Button label={tr('结束测试')} variant="secondary" style={{ flex: 1 }} onPress={() => confirmStop(() => onStop(yoyoCompletedAt((Date.now() - startAt) / 1000)))} />
+          <Button label={tr('结束测试')} variant="secondary" style={{ flex: 1 }} onPress={stop} />
         </View>
       </SafeAreaView>
     </RunningScreen>

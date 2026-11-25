@@ -3,6 +3,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useState, type ReactNode } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useBackButton } from '@/components/backButton';
 import { newSessionId, saveSession } from '@/db/repo';
 import { tr } from '@/i18n';
 import { useAthlete } from '@/state/athlete';
@@ -23,8 +24,9 @@ export function Steps({ title, steps }: { title: string; steps: string[] }) {
   );
 }
 
-/** While a test runs: no header and no swipe-back, so a stray gesture can't abandon it. */
-export function RunningScreen({ children }: { children: ReactNode }) {
+/** While a test runs: no header and no swipe-back, so a stray gesture can't abandon it; Android's back asks, as 结束 does. */
+export function RunningScreen({ children, onBack }: { children: ReactNode; onBack: () => void }) {
+  useBackButton(onBack);
   return (
     <>
       <Stack.Screen options={{ headerShown: false, gestureEnabled: false }} />

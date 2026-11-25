@@ -1,7 +1,7 @@
 // Drives the in-app camera for jump tests and VBT sets: the camera page in the WebView is replaced by messages like the
 // page's, so the flow runs from the camera coming up to a take handed on to the jump analysis or the bar tracking.
 import * as ScreenOrientation from 'expo-screen-orientation';
-import { Alert, Text, type AlertButton } from 'react-native';
+import { Alert, BackHandler, Text, type AlertButton } from 'react-native';
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 import { dropTake, dropTestTakes } from '@/media/takes';
@@ -187,6 +187,26 @@ it('asks before closing throws away a take, and closes straight away before film
   await open({ to: '/measure/analyse', metric: 'cmj', session: 'cmj-1' });
   await press('关闭');
   expect(mockRouter.back).toHaveBeenCalled();
+});
+
+it('asks the same when Android’s back button would leave a take behind', async () => {
+  const back: (() => boolean | null | undefined)[] = [];
+  const listen = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_e, h) => {
+    back.push(h);
+    return { remove: () => back.splice(back.indexOf(h), 1) };
+  });
+  await open({ to: '/measure/analyse', metric: 'cmj', session: 'cmj-1' });
+  await film(4);
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  let handled: boolean | null | undefined;
+  await act(async () => {
+    handled = back.at(-1)?.();
+  });
+  expect(handled).toBe(true);
+  expect(mockRouter.back).not.toHaveBeenCalled();
+  expect(alert).toHaveBeenCalledWith('放弃这段录像？', '录好的 4.0 秒不会保存。', expect.any(Array));
+  alert.mockRestore();
+  listen.mockRestore();
 });
 
 it('also asks when recording was asked for but has not started yet', async () => {

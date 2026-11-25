@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { captureGuide } from '@/components/capture/guides';
+import { useBackButton } from '@/components/backButton';
 import { leaveCamera } from '@/components/capture/leave';
 import { Icon } from '@/components/Icon';
 import { FadeIn } from '@/components/motion';
@@ -65,6 +66,7 @@ export default function TestCamera() {
   const camera = useRef<PoseCameraHandle>(null);
   const [info, setInfo] = useState<CameraInfo | null>(null);
   const [rec, setRec] = useState<Rec>({ name: 'live' });
+  useBackButton(() => leaveCamera(rec, () => router.back()));
   const [now, setNow] = useState(0);
   const [attempt, setAttempt] = useState(0);
 

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useBackButton } from '@/components/backButton';
 import { leaveCamera } from '@/components/capture/leave';
 import { Icon } from '@/components/Icon';
 import { FadeIn } from '@/components/motion';
@@ -72,6 +73,7 @@ export default function TechniqueCamera() {
   const [muted, setMuted] = useState(false);
   const [info, setInfo] = useState<CameraInfo | null>(null);
   const [rec, setRec] = useState<Rec>({ name: 'live' });
+  useBackButton(() => leaveCamera(rec, () => router.back()));
   const [now, setNow] = useState(0);
   const [attempt, setAttempt] = useState(0);
 

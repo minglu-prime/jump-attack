@@ -1,5 +1,5 @@
 // Runs the conditioning tests end to end on a fake clock against a real (in-memory) database.
-import { Alert, Text, TextInput, type AlertButton } from 'react-native';
+import { Alert, BackHandler, Text, TextInput, type AlertButton } from 'react-native';
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 import CooperTest from '@/app/conditioning/cooper';
@@ -161,4 +161,28 @@ it.each([
   } finally {
     setLang('zh');
   }
+});
+
+it('asks before Android’s back button abandons a test that is running', async () => {
+  const back: (() => boolean | null | undefined)[] = [];
+  const listen = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_e, h) => {
+    back.push(h);
+    return { remove: () => back.splice(back.indexOf(h), 1) };
+  });
+  let r!: ReactTestRenderer;
+  await act(async () => {
+    r = create(<YoyoTest />);
+  });
+  await press(r, '开始（5 秒后起跑）');
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  let handled: boolean | null | undefined;
+  await act(async () => {
+    handled = back.at(-1)?.();
+  });
+  expect(handled).toBe(true);
+  expect(alert).toHaveBeenCalledWith('结束测试？', expect.any(String), expect.any(Array));
+  expect(texts(r.root)).toContain('结束测试');
+  alert.mockRestore();
+  listen.mockRestore();
+  await act(async () => r.unmount());
 });
