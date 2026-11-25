@@ -79,3 +79,13 @@ it('lists a block plan week by week and ends it after confirming', async () => {
   expect(await getActivePlan(mockDb, 1)).toBeNull();
   expect(mockRouter.back).toHaveBeenCalled();
 });
+
+it('opens today’s session from the plan before it is started', async () => {
+  await startPlan(mockDb, 1, { templateCode: BLOCK_PLAN_CODE, startDate: today, weekdays: [1, 3, 5], blocks: [{ start: today, type: 'reactive' }] });
+  const r = await render();
+  mockRouter.push.mockClear();
+  const row = pressable(r.root, '今天');
+  expect(row.props.disabled).toBeFalsy();
+  await act(async () => row.props.onPress());
+  expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/workout/[date]', params: { date: today } });
+});

@@ -46,15 +46,16 @@ export default function NewPlan() {
   const ready = weekdays.length === needed;
   const goalDate = current?.goal_date ?? null;
   const block = template.blocks ? firstBlock(diagnosis, startDate, picked ?? undefined, goalDate) : null;
-  const settings: PlanSettings = { templateCode: code, startDate, weekdays, goalDate, ...(block ? { blocks: [block] } : {}) };
+  const settings: PlanSettings = { templateCode: code, startDate, weekdays: [...weekdays].sort((a, b) => a - b), goalDate, ...(block ? { blocks: [block] } : {}) };
 
   function pickTemplate(t: PlanTemplate) {
     setCode(t.code);
     setWeekdays(defaultWeekdays(t.sessions.length));
   }
 
+  // Kept in the order picked: with every day already chosen, a new one takes the place of the one picked first.
   function toggleDay(d: number) {
-    setWeekdays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : cur.length < needed ? [...cur, d] : cur));
+    setWeekdays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d].slice(-needed)));
   }
 
   async function create() {

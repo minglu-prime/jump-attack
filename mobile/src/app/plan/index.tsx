@@ -122,7 +122,8 @@ export default function PlanOverview() {
                   <Pressable
                     key={p.date}
                     accessibilityRole="button"
-                    disabled={!w}
+                    // Today's session opens before it is started (the workout screen starts it); past ones are made up from the training tab.
+                    disabled={!w && p.date !== today}
                     onPress={() => router.push({ pathname: '/workout/[date]', params: { date: p.date } })}
                     style={styles.row}
                   >
