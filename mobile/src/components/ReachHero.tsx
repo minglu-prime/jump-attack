@@ -5,6 +5,7 @@ import Svg, { Defs, Line, LinearGradient, Path, Rect, Stop } from 'react-native-
 import { openDunkTest } from '@/components/dunkTests';
 import { Icon } from '@/components/Icon';
 import { CountUp, ease, useReduceMotion } from '@/components/motion';
+import { Digits } from '@/components/ui';
 import { greeting } from '@/domain/athletes';
 import { RIM_CM, reachRuler, type DunkDiagnosis } from '@/domain/dunk';
 import { gapHeading, touchSpread } from '@/domain/dunkSummary';
@@ -134,7 +135,13 @@ export function ReachHero({ diagnosis: d, standingReach, name, onSwitchAthlete }
               accessibilityValue={ruler ? { min: 0, max: 100, now: Math.round(ruler.progress * 100) } : undefined}
             >
               <Text style={text.muted}>{touchLabel}</Text>
-              <CountUp value={touch!} from={standingReach ?? Math.round(touch! - 60)} format={cm} style={styles.touch} />
+              <CountUp
+                value={touch!}
+                from={standingReach ?? Math.round(touch! - 60)}
+                // Every frame in the final value's precision (318.5 rolls through 280.0, not 280), in fixed-width slots.
+                format={(v) => decimal(v, Number.isInteger(touch) ? 0 : 1)}
+                render={(s) => <Digits style={styles.touch}>{s}</Digits>}
+              />
               <Text style={text.muted}>cm</Text>
             </View>
             {touchSpread(d) && <Text style={text.caption}>{touchSpread(d)}</Text>}

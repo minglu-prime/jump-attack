@@ -175,6 +175,27 @@ describe('one motion language', () => {
   });
 });
 
+describe('CountUp', () => {
+  it('starts from where it rolls from, never flashing the final value first', async () => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+    jest.spyOn(Animated, 'timing').mockReturnValue({ start: () => {}, stop: () => {} } as never);
+    let r!: ReactTestRenderer;
+    await act(async () => {
+      r = track(<CountUp value={318.5} from={280} format={(v) => v.toFixed(1)} />);
+    });
+    expect(r.root.findByType(Text).props.children).toBe('280.0');
+  });
+
+  it('shows the final value and rolls on from it later when the phone asks for less motion', async () => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    let r!: ReactTestRenderer;
+    await act(async () => {
+      r = track(<CountUp value={318} from={280} format={String} />);
+    });
+    expect(r.root.findByType(Text).props.children).toBe('318');
+  });
+});
+
 describe('Swap', () => {
   const swap = (id: string) => (
     <Swap id={id}>

@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { AccessibilityInfo, Animated, Text } from 'react-native';
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 import { diagnose, type DunkInput } from '@/domain/dunk';
@@ -55,4 +55,22 @@ it('asks for a first touch when there is none', async () => {
   expect(t).toContain('还不知道离扣篮多远');
   expect(t).toContain('测一次助跑摸高');
   await act(async () => r.unmount());
+});
+
+it('rolls the touch up in steady digit slots, keeping its decimal at whole numbers on the way', async () => {
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+  const listeners: ((s: { value: number }) => void)[] = [];
+  const RealValue = Animated.Value;
+  jest.spyOn(Animated, 'Value').mockImplementation(function (this: unknown, v: number) {
+    const real = new RealValue(v);
+    real.addListener = (f: (s: { value: number }) => void) => (listeners.push(f), 'id');
+    return real;
+  } as never);
+  jest.spyOn(Animated, 'timing').mockReturnValue({ start: () => {}, stop: () => {} } as never);
+  const r = await render({ ...base, approachTouch: [312, 318.5] });
+  await act(async () => listeners.forEach((f) => f({ value: 280 })));
+  // The number is drawn in fixed-width slots (one Text per character), labelled as a whole for VoiceOver.
+  expect(r.root.findAll((n) => n.props.accessibilityLabel === '280.0').length).toBeGreaterThan(0);
+  await act(async () => r.unmount());
+  jest.restoreAllMocks();
 });
