@@ -60,7 +60,7 @@ const DIGIT_EM: Record<string, number> = { [fonts.numericBold]: 0.49, [fonts.num
  * gets a slot as wide as the widest one: the line holds still instead of swaying as "1"s come and go.
  */
 export function Digits({ children, style }: { children: string; style: StyleProp<TextStyle> }) {
-  const flat = StyleSheet.flatten(style);
+  const flat = StyleSheet.flatten(style) ?? {};
   const slot = (flat.fontSize ?? 15) * (DIGIT_EM[flat.fontFamily ?? ''] ?? 0.6);
   return (
     <View accessible accessibilityLabel={children} style={styles.digits}>
