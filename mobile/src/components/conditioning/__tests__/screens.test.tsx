@@ -1,11 +1,12 @@
 // Runs the conditioning tests end to end on a fake clock against a real (in-memory) database.
-import { Alert, Text, TextInput, type AlertButton } from 'react-native';
+import { Alert, BackHandler, Text, TextInput, type AlertButton } from 'react-native';
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 import CooperTest from '@/app/conditioning/cooper';
 import RsaTest from '@/app/conditioning/rsa';
 import YoyoTest from '@/app/conditioning/yoyo';
 import { migrate } from '@/db/migrations';
+import { setLang, tr } from '@/i18n';
 import { listMetricResults, listSessionValues } from '@/db/repo';
 import { openMemoryDb } from '@/db/testing/memoryDb';
 import { YOYO_IR1 } from '@/domain/conditioning';
@@ -139,4 +140,49 @@ it('counts Cooper laps, ends at 12 minutes and adds the last partial lap', async
   const [saved] = await listMetricResults(mockDb, 1, getMetric('cooper')!);
   expect(saved.best).toBe(2950);
   expect(mockSpeak).toHaveBeenCalledWith('时间到，停在原地', expect.anything());
+});
+
+it.each([
+  ['Yo-Yo', YoyoTest],
+  ['Cooper', CooperTest],
+])('speaks the %s cues in the language the app is in now, not the one it loaded in', async (_name, Screen) => {
+  setLang('en');
+  try {
+    let r!: ReactTestRenderer;
+    await act(async () => {
+      r = create(<Screen />);
+    });
+    await press(r, tr('开始（{LEAD_IN_S} 秒后起跑）', { LEAD_IN_S: 5 }));
+    await tick(5);
+    const said = mockSpeak.mock.calls.map((c) => c[0]);
+    expect(said).toEqual(expect.arrayContaining(['Get ready', 'Three']));
+    expect(said).not.toContain('准备');
+    await act(async () => r.unmount());
+  } finally {
+    setLang('zh');
+  }
+});
+
+it('asks before Android’s back button abandons a test that is running', async () => {
+  const back: ((...e: never[]) => boolean | null | undefined)[] = [];
+  const listen = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_e, h) => {
+    back.push(h);
+    return { remove: () => back.splice(back.indexOf(h), 1) };
+  });
+  let r!: ReactTestRenderer;
+  await act(async () => {
+    r = create(<YoyoTest />);
+  });
+  await press(r, '开始（5 秒后起跑）');
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  let handled: boolean | null | undefined;
+  await act(async () => {
+    handled = back.at(-1)?.();
+  });
+  expect(handled).toBe(true);
+  expect(alert).toHaveBeenCalledWith('结束测试？', expect.any(String), expect.any(Array));
+  expect(texts(r.root)).toContain('结束测试');
+  alert.mockRestore();
+  listen.mockRestore();
+  await act(async () => r.unmount());
 });

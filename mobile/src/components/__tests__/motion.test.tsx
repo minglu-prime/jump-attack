@@ -4,6 +4,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { motion } from '@/theme';
 
 import { CountUp, ease, FadeIn, PressScale, Rise, Swap } from '../motion';
+import { Button } from '../ui';
 
 const mockSelection = jest.fn(() => Promise.resolve());
 jest.mock('expo-haptics', () => ({ selectionAsync: () => mockSelection() }));
@@ -172,6 +173,39 @@ describe('one motion language', () => {
     });
     await act(async () => listener!({ value: 271.46 }));
     expect(r.root.findByType(Text).props.children).toBe('271 cm');
+  });
+});
+
+it('fades a button’s new label in place (保存 → 已保存), as it does the spinner', async () => {
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+  const timing = jest.spyOn(Animated, 'timing');
+  let r!: ReactTestRenderer;
+  await act(async () => {
+    r = track(<Button label="保存" onPress={() => {}} />);
+  });
+  timing.mockClear();
+  await act(async () => r.update(<Button label="已保存" onPress={() => {}} />));
+  expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ toValue: 1, duration: motion.swap }));
+});
+
+describe('CountUp', () => {
+  it('starts from where it rolls from, never flashing the final value first', async () => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+    jest.spyOn(Animated, 'timing').mockReturnValue({ start: () => {}, stop: () => {} } as never);
+    let r!: ReactTestRenderer;
+    await act(async () => {
+      r = track(<CountUp value={318.5} from={280} format={(v) => v.toFixed(1)} />);
+    });
+    expect(r.root.findByType(Text).props.children).toBe('280.0');
+  });
+
+  it('shows the final value and rolls on from it later when the phone asks for less motion', async () => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
+    let r!: ReactTestRenderer;
+    await act(async () => {
+      r = track(<CountUp value={318} from={280} format={String} />);
+    });
+    expect(r.root.findByType(Text).props.children).toBe('318');
   });
 });
 

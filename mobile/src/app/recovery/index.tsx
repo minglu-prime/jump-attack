@@ -5,7 +5,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Card, Chip } from '@/components/ui';
+import { Button, Card, Chip, LoadFailed, Loading } from '@/components/ui';
 import { listRecoveryDays, saveRecoveryDay, type RecoverySource } from '@/db/recovery';
 import { addDays, shortDate, type ISODate } from '@/domain/dates';
 import { manualProblem, parseNumber } from '@/domain/entry';
@@ -55,6 +55,9 @@ export default function Recovery() {
   const [saving, setSaving] = useState(false);
   const [sources, setSources] = useState<Sources>({});
   const [importNote, setImportNote] = useState<string | null>(null);
+  const [savedOn, setSavedOn] = useState<ISODate | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(
     async (d: ISODate) => {
@@ -64,19 +67,25 @@ export default function Recovery() {
       setForm(toForm(rows.find((r) => r.date === d)));
       setSources({});
       setImportNote(null);
+      setLoaded(true);
     },
     [db, current],
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      load(date);
-    }, [load, date]),
-  );
+  const open = useCallback(() => {
+    load(date).then(
+      () => setError(null),
+      (e) => setError(String(e)),
+    );
+  }, [load, date]);
+  useFocusEffect(open);
 
   const read = readRecovery(days, today);
   const todayRow = days.find((d) => d.date === today);
   const values = Object.fromEntries(KEYS.map((k) => [k, parseNumber(form[k])])) as Record<RecoveryKey, number | null>;
+  const stored = days.find((d) => d.date === date);
+  // What is typed differs from what is saved for the day: only then is there anything to save.
+  const dirty = KEYS.some((k) => values[k] !== (stored?.[k] ?? null));
   const problems = KEYS.map((k) => values[k] != null && manualProblem(getMetric(RECOVERY_CODES[k])!, values[k]!)).filter(Boolean) as string[];
 
 
@@ -109,17 +118,56 @@ export default function Recovery() {
     });
   }
 
-  async function save() {
-    if (!current || problems.length) return;
+  async function write() {
+    if (!current) return;
     setSaving(true);
     try {
       await saveRecoveryDay(db, current.id, { date, ...values }, sources);
       await load(date);
+      setSavedOn(date);
     } catch (e) {
       Alert.alert(tr('保存失败'), String(e));
     } finally {
       setSaving(false);
     }
+  }
+
+  function save() {
+    if (!current || problems.length) return;
+    // Every box emptied on a day that has a record: the save deletes the day, so it asks first.
+    if (stored && KEYS.every((k) => values[k] == null)) {
+      Alert.alert(tr('清空 {date} 的恢复记录？', { date: shortDate(date) }), tr('这一天记下的数都会删掉。'), [
+        { text: tr('取消'), style: 'cancel' },
+        { text: tr('清空'), style: 'destructive', onPress: () => void write() },
+      ]);
+      return;
+    }
+    void write();
+  }
+
+  /** Values typed and not saved would be replaced by the other day's: ask first. */
+  function pickDate(d: ISODate) {
+    if (d === date) return;
+    if (!dirty) return setDate(d);
+    Alert.alert(tr('还没保存'), tr('换到另一天，刚才填的数不会保存。'), [
+      { text: tr('继续填'), style: 'cancel' },
+      { text: tr('不保存'), style: 'destructive', onPress: () => setDate(d) },
+    ]);
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['bottom']}>
+        <LoadFailed title={tr('恢复数据没加载出来')} error={error} onRetry={open} />
+      </SafeAreaView>
+    );
+  }
+  if (!loaded) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['bottom']}>
+        <Loading />
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -167,8 +215,8 @@ export default function Recovery() {
           <View style={styles.formHead}>
             <Text style={text.section}>{tr('记录')}</Text>
             <View style={{ flexDirection: 'row', gap: 6 }}>
-              <Chip label={tr('今天')} selected={date === today} onPress={() => setDate(today)} color={COLOR} />
-              <Chip label={tr('昨天')} selected={date === addDays(today, -1)} onPress={() => setDate(addDays(today, -1))} color={COLOR} />
+              <Chip label={tr('今天')} selected={date === today} onPress={() => pickDate(today)} color={COLOR} />
+              <Chip label={tr('昨天')} selected={date === addDays(today, -1)} onPress={() => pickDate(addDays(today, -1))} color={COLOR} />
             </View>
           </View>
           <Text style={text.caption}>{tr('{date} · 起床后记一次。可以从苹果健康导入，也可以手填。', { date: shortDate(date) })}</Text>
@@ -203,7 +251,7 @@ export default function Recovery() {
               {p}
             </Text>
           ))}
-          <Button label={tr('保存')} onPress={save} busy={saving} disabled={problems.length > 0} />
+          <Button label={!dirty && savedOn === date ? tr('已保存') : tr('保存')} onPress={save} busy={saving} disabled={!dirty || problems.length > 0} />
         </Card>
 
         <Pressable accessibilityRole="link" onPress={() => router.push({ pathname: '/history/[metric]', params: { metric: RECOVERY_CODES.hrv } })}>

@@ -228,6 +228,27 @@ it('trims the clip like the Photos app, and analyses the part kept by itself onc
   expect(texts(r.root)).toContain('认出 1 跳，计入 1 跳');
 });
 
+it('holds the automatic start while the frame rate is being picked or the clip scrubbed through', async () => {
+  await open(defaultScene('cmj', { shadow: 0.4 }), { metric: 'cmj', session: 'cmj-hold' });
+  const handle = r.root.find((n) => n.props.accessibilityLabel === '片段开始' && typeof n.props.onAccessibilityAction === 'function');
+  const strip = () => r.root.find((n) => typeof n.props.onScrub === 'function');
+  jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
+  try {
+    await act(async () => handle.props.onAccessibilityAction({ nativeEvent: { actionName: 'increment' } }));
+    await act(async () => jest.advanceTimersByTime(1500));
+    // Choosing the frame rate is still setting up: the countdown starts over instead of running the old rate.
+    await press(r.root, '240');
+    await act(async () => jest.advanceTimersByTime(1500));
+    await act(async () => strip().props.onScrub(40));
+    await act(async () => jest.advanceTimersByTime(1500));
+    expect(mockWeb.inject).not.toHaveBeenCalled();
+    await act(async () => jest.advanceTimersByTime(500));
+  } finally {
+    jest.useRealTimers();
+  }
+  expect(mockWeb.inject).toHaveBeenCalled();
+});
+
 it('scores no 10/5 from a set cut short, and says why nothing can be saved', async () => {
   const full = defaultScene('repeat', { shadow: 0.4 });
   const scene = { ...full, hops: full.hops!.slice(0, 2), durationS: 3 };
@@ -345,4 +366,16 @@ describe('several clips picked at once', () => {
     await press(r.root, '手动逐帧标');
     expect(mockRouter.replace).toHaveBeenLastCalledWith({ pathname: '/measure/mark', params: expect.objectContaining({ uri: 'file:///picked/IMG_0003.MOV', queue }) });
   });
+});
+
+it('asks nothing about the frame rate of a clip filmed in the app, which is never slow motion', async () => {
+  const scene = defaultScene('cmj', { fps: 60 });
+  await open(scene, { metric: 'cmj', session: 'cam-1', fps: '60' });
+  // An imported clip may be a slow-motion export, so the rate is asked for.
+  expect(texts(r.root)).toContain('拍摄帧率');
+  await act(async () => r.unmount());
+
+  await open(scene, { metric: 'cmj', session: 'cam-2', fps: '60', source: 'camera' });
+  expect(texts(r.root)).not.toContain('拍摄帧率');
+  expect(texts(r.root)).not.toContain('慢动作');
 });

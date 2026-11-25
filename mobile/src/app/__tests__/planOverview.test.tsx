@@ -89,3 +89,15 @@ it('opens today’s session from the plan before it is started', async () => {
   await act(async () => row.props.onPress());
   expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/workout/[date]', params: { date: today } });
 });
+
+it('sends the goal day to the training tab, where the touch test and dunk attempts are, not to a list of sets to tick', async () => {
+  await mockDb.runAsync('UPDATE athlete SET goal_date = ? WHERE id = 1', today);
+  try {
+    const r = await render();
+    mockRouter.push.mockClear();
+    await act(async () => pressable(r.root, '今天').props.onPress());
+    expect(mockRouter.push).toHaveBeenCalledWith('/train');
+  } finally {
+    await mockDb.runAsync('UPDATE athlete SET goal_date = NULL WHERE id = 1');
+  }
+});

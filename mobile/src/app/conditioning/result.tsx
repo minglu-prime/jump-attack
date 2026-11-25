@@ -1,10 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button } from '@/components/ui';
+import { Button, Empty, LoadFailed, Loading } from '@/components/ui';
 import { listMetricResults, listTrials } from '@/db/repo';
 import { rsaRating, rsaSummary, vo2maxBand, yoyoLabel, YOYO_SHUTTLE_M } from '@/domain/conditioning';
 import { trendBaseline } from '@/domain/assess';
@@ -20,14 +20,11 @@ export default function ConditioningResult() {
   const def = CONDITIONING_TESTS.find((m) => m.code === metric);
   const db = useSQLiteContext();
   const { current } = useAthlete();
-  const [data, setData] = useState<{ values: number[]; result: number | null; assessment: Assessment | null; poorDay: boolean }>({
-    values: [],
-    result: null,
-    assessment: null,
-    poorDay: false,
-  });
+  // undefined while it is read; null when the session has no result (deleted meanwhile).
+  const [data, setData] = useState<{ values: number[]; result: number | null; assessment: Assessment | null; poorDay: boolean } | null | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let alive = true;
     (async () => {
       if (!def || !current) return;
@@ -35,14 +32,20 @@ export default function ConditioningResult() {
       const all = await listMetricResults(db, current.id, def);
       const mine = all.find((r) => r.session_id === session);
       const { previous, poorDay } = trendBaseline(all, session, await loadPoorDaysOf(db, current.id, def.code, all));
-      if (alive && mine) setData({ values, result: mine.best, assessment: assess(def, previous, mine.best), poorDay });
-    })();
+      if (!alive) return;
+      setData(mine ? { values, result: mine.best, assessment: assess(def, previous, mine.best), poorDay } : null);
+      setError(null);
+    })().catch((e) => alive && setError(String(e)));
     return () => {
       alive = false;
     };
   }, [db, session, def, current]);
+  useEffect(load, [load]);
 
-  if (!def) return null;
+  if (!def) return <Empty title={tr('找不到这个测试')} />;
+  if (error) return <LoadFailed title={tr('成绩没加载出来')} error={error} onRetry={load} />;
+  if (data === undefined) return <Loading />;
+  if (data === null) return <Empty title={tr('找不到这次成绩')} hint={tr('可能已经删掉了。')} />;
   const { values, result, assessment, poorDay } = data;
   const vo2 = def.estimate && result != null ? def.estimate.from(result) : null;
   const rsa = def.code === 'rsa' && values.length > 1 ? rsaSummary(values) : null;

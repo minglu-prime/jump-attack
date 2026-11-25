@@ -203,14 +203,35 @@ export function PressScale({ children, style, haptic = true, onPress, onPressIn,
 /**
  * A number that rolls to `value` (a scoreboard turning over): from `from` the first time, from whatever it shows when
  * the value changes later. Every frame is written by `format`, so decimals and units never flicker. Shows the value
- * at once when the phone asks for less motion.
+ * at once when the phone asks for less motion. `render` draws the text (e.g. in fixed-width digit slots).
  */
-export function CountUp({ value, from, format, style }: { value: number; from: number; format: (v: number) => string; style?: StyleProp<TextStyle> }) {
-  const reduce = useReduceMotion();
+export function CountUp({
+  value,
+  from,
+  format,
+  style,
+  render,
+}: {
+  value: number;
+  from: number;
+  format: (v: number) => string;
+  style?: StyleProp<TextStyle>;
+  render?: (text: string) => ReactNode;
+}) {
+  // The setting as last known app-wide until this component hears it: the first frame already shows the right start.
+  const heard = useReduceMotion();
+  const reduce = heard ?? reduceMotionNow;
   const [shown, setShown] = useState<number | null>(null);
+  // The number on screen between rolls: where the next roll starts.
+  const [settled, setSettled] = useState(from);
+  if (heard === true && settled !== value) setSettled(value);
   const last = useRef(from);
   useEffect(() => {
-    if (reduce !== false) return;
+    if (reduce !== false) {
+      // Shown at once; a later roll (motion back on) starts from here, not from a stale start.
+      if (heard) last.current = value;
+      return;
+    }
     const v = new Animated.Value(last.current);
     const id = v.addListener(({ value: x }) => {
       last.current = x;
@@ -220,14 +241,17 @@ export function CountUp({ value, from, format, style }: { value: number; from: n
     a.start(({ finished }) => {
       if (!finished) return;
       last.current = value;
+      setSettled(value);
       setShown(null);
     });
     return () => {
       a.stop();
       v.removeListener(id);
     };
-  }, [reduce, value]);
+  }, [reduce, heard, value]);
   // Rolling frames keep the final value's precision, so the number never grows a digit and shifts the line.
   const frame = (x: number) => format(Number.isInteger(value) ? Math.round(x) : Math.round(x * 10) / 10);
-  return <Text style={style}>{shown == null || reduce !== false ? format(value) : frame(shown)}</Text>;
+  // Before the first frame of a roll, the number it rolls from; with the setting unknown, the same (nothing jumps back).
+  const text = reduce === true ? format(value) : shown != null ? frame(shown) : settled === value ? format(value) : frame(settled);
+  return render ? render(text) : <Text style={style}>{text}</Text>;
 }

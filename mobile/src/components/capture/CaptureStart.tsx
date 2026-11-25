@@ -17,7 +17,7 @@ export default function CaptureStart({ title, subtitle, guide, note, onClose, on
   return (
     <SafeAreaView style={styles.screen}>
       <CaptureHeader title={title} subtitle={subtitle} onClose={onClose} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         {gate ?? (
           <View style={styles.choices}>
             {onFilm && <Choice icon="camera" title={tr('App 里直接拍')} detail={guide.film} primary onPress={onFilm} />}

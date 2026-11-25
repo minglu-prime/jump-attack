@@ -29,7 +29,6 @@ function buildCues(): Cue[] {
   return cues;
 }
 
-const CUES = buildCues();
 
 export default function CooperTest() {
   const [phase, setPhase] = useState<'intro' | 'running' | 'confirm'>('intro');
@@ -45,7 +44,7 @@ export default function CooperTest() {
 
   return (
     <SafeAreaView style={runStyles.screen} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Text style={styles.lead}>{tr('12 分钟内跑尽量远，按距离估算 VO2max。要匀速，开头别冲太快。')}</Text>
         <Steps title={tr('怎么测')} steps={STEPS} />
         <View style={{ gap: 10 }}>
@@ -75,7 +74,9 @@ export default function CooperTest() {
 function Running({ startAt, lapM, laps, onLap, onStop }: { startAt: number; lapM: number; laps: number; onLap: (n: number) => void; onStop: () => void }) {
   useKeepAwake();
   const player = useCues();
-  const t = useTimeline(startAt, CUES, player);
+  // Built here, not at module load: tr() must see the language the app is in now (i18n rule).
+  const [cues] = useState(buildCues);
+  const t = useTimeline(startAt, cues, player);
   const over = t >= COOPER_SECONDS;
 
   useEffect(() => {
@@ -84,8 +85,10 @@ function Running({ startAt, lapM, laps, onLap, onStop }: { startAt: number; lapM
     return () => clearTimeout(id);
   }, [over, onStop]);
 
+  const stop = () => confirmStop(onStop, tr('不足 12 分钟的距离没法估算 VO2max，下一页可以手动填完整成绩。'));
+
   return (
-    <RunningScreen>
+    <RunningScreen onBack={stop}>
       <SafeAreaView style={runStyles.screen}>
         <View style={[runStyles.body, { justifyContent: 'center' }]}>
           <Text style={runStyles.label}>{t < 0 ? tr('准备起跑') : over ? tr('时间到') : tr('剩余时间')}</Text>
@@ -114,7 +117,7 @@ function Running({ startAt, lapM, laps, onLap, onStop }: { startAt: number; lapM
           )}
         </View>
         <View style={runStyles.footer}>
-          <Button label={tr('提前结束')} variant="secondary" style={{ flex: 1 }} onPress={() => confirmStop(onStop, tr('不足 12 分钟的距离没法估算 VO2max，下一页可以手动填完整成绩。'))} />
+          <Button label={tr('提前结束')} variant="secondary" style={{ flex: 1 }} onPress={stop} />
         </View>
       </SafeAreaView>
     </RunningScreen>
@@ -132,7 +135,7 @@ function Confirm({ laps, lapM }: { laps: number; lapM: number }) {
 
   return (
     <SafeAreaView style={runStyles.screen} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         {lapM ? (
           <>
             <Text style={styles.label}>{tr('记了 {laps} 圈 × {lapM} m = {counted} m', { laps, lapM, counted })}</Text>

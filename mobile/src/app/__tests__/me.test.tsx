@@ -132,6 +132,55 @@ describe('saving the profile', () => {
     expect(button(r).props.disabled).toBe(false);
   });
 
+  it('has nothing to save until something is changed', async () => {
+    const r = await render();
+    expect(button(r).props.disabled).toBe(true);
+    await type(r.root, '体重（kg）', '83');
+    expect(button(r).props.disabled).toBe(false);
+  });
+
+  it('asks before switching athlete with changes not saved, and keeps them when the answer is no', async () => {
+    const r = await render();
+    const radio = (name: string) => r.root.find((n) => n.props.accessibilityRole === 'radio' && n.findAllByType(Text).some((t) => t.props.children === name));
+    const before = field(r.root, '名字').props.value;
+    await type(r.root, '体重（kg）', '84');
+    const alert = jest.spyOn(Alert, 'alert');
+    alert.mockImplementationOnce((_t, _m, buttons?: AlertButton[]) => buttons?.find((b) => b.style === 'cancel')?.onPress?.());
+    await act(async () => radio('队友').props.onPress());
+    expect(alert).toHaveBeenCalledWith('档案还没保存', expect.any(String), expect.any(Array));
+    expect(field(r.root, '名字').props.value).toBe(before);
+    expect(field(r.root, '体重（kg）').props.value).toBe('84');
+
+    alert.mockImplementationOnce((_t, _m, buttons?: AlertButton[]) => buttons?.find((b) => b.style === 'destructive')?.onPress?.());
+    await act(async () => radio('队友').props.onPress());
+    expect(field(r.root, '名字').props.value).toBe('队友');
+    alert.mockRestore();
+    // Back to the first athlete for the tests after this one; nothing is edited, so nothing is asked.
+    await act(async () => radio(before).props.onPress());
+    expect(field(r.root, '名字').props.value).toBe(before);
+  });
+
+  it('says 已保存 after a save that changed nothing in the end', async () => {
+    const r = await render();
+    const mass = field(r.root, '体重（kg）').props.value;
+    await type(r.root, '体重（kg）', `${mass}1`);
+    await type(r.root, '体重（kg）', mass);
+    await act(async () => button(r).props.onPress());
+    expect(texts(r.root)).toContain('已保存');
+    expect(button(r).props.disabled).toBe(true);
+  });
+
+  it.each(['团队总览', '导入运动员'])('asks before %s can put another athlete in front of changes not saved', async (label) => {
+    const r = await render();
+    await type(r.root, '体重（kg）', '85');
+    const alert = jest.spyOn(Alert, 'alert');
+    alert.mockImplementationOnce((_t, _m, buttons?: AlertButton[]) => buttons?.find((b) => b.style === 'cancel')?.onPress?.());
+    await act(async () => pressable(r.root, label).props.onPress());
+    expect(alert).toHaveBeenCalledWith('档案还没保存', expect.any(String), expect.any(Array));
+    expect(field(r.root, '体重（kg）').props.value).toBe('85');
+    alert.mockRestore();
+  });
+
   it('says why a save failed and lets it be tried again', async () => {
     const repo = jest.requireActual('@/db/repo');
     const spy = jest.spyOn(repo, 'updateAthlete').mockRejectedValueOnce(new Error('disk full'));

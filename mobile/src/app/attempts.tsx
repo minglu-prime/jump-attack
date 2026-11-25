@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { FadeIn, nextLayout, PressScale } from '@/components/motion';
 import { OUTCOME_COLOR, OutcomeButtons } from '@/components/OutcomeButtons';
-import { Button, Card } from '@/components/ui';
+import { Button, Card, LoadFailed, Loading } from '@/components/ui';
 import { addDunkAttempt, deleteDunkAttempt, listDunkAttempts } from '@/db/dunkAttempts';
 import { newSessionId } from '@/db/repo';
 import { listTechniqueTakes, techniqueVideoUris } from '@/db/technique';
@@ -42,6 +42,8 @@ export default function Attempts() {
   const { current } = useAthlete();
   const goalRim = current?.rim_height_cm ?? RIM_CM;
   const [attempts, setAttempts] = useState<DunkAttempt[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [rimText, setRimText] = useState<string | null>(null);
   const [ball, setBall] = useState<Ball | null>(null);
   // The attempt just logged, which one tap takes back: a thumb that hit the wrong button needs no confirm.
@@ -55,6 +57,8 @@ export default function Attempts() {
   const load = useCallback(async () => {
     if (!current) return;
     setAttempts(await listDunkAttempts(db, current.id));
+    setLoaded(true);
+    setError(null);
     const takes = await listTechniqueTakes(db, current.id);
     setHeights(Object.fromEntries(takes.filter((t) => t.metrics.vz).map((t) => [t.id, jumpHeightCm(t.metrics.vz!)])));
     if (isWeb) return;
@@ -63,11 +67,10 @@ export default function Attempts() {
     pruneTakes(await techniqueVideoUris(db));
   }, [db, current]);
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
+  const open = useCallback(() => {
+    load().catch((e) => setError(String(e)));
+  }, [load]);
+  useFocusEffect(open);
 
   // Until changed, carry on at the hoop and ball of the latest attempt; the athlete's own rim the first time.
   const last = attempts.at(-1);
@@ -112,9 +115,13 @@ export default function Attempts() {
         text: tr('删除'),
         style: 'destructive',
         onPress: async () => {
-          await deleteDunkAttempt(db, a.id);
-          nextLayout();
-          await load();
+          try {
+            await deleteDunkAttempt(db, a.id);
+            nextLayout();
+            await load();
+          } catch (e) {
+            Alert.alert(tr('没删掉'), String(e));
+          }
         },
       },
     ]);
@@ -174,6 +181,21 @@ export default function Attempts() {
           </Pressable>
         )}
       </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['bottom']}>
+        <LoadFailed title={tr('扣篮记录没加载出来')} error={error} onRetry={open} />
+      </SafeAreaView>
+    );
+  }
+  if (!loaded) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['bottom']}>
+        <Loading />
+      </SafeAreaView>
     );
   }
 

@@ -1,6 +1,6 @@
 // Drives the dunk diagnosis on the home and diagnosis screens, and the jump list's dunk section, against an in-memory database.
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
-import { Text } from 'react-native';
+import { AccessibilityInfo, Animated, Text } from 'react-native';
 
 import { addDropJump } from '@/db/jumps';
 import { migrate } from '@/db/migrations';
@@ -111,6 +111,19 @@ describe('with results', () => {
     await addVbtSet(mockDb, 1, 'vbt-1', 'vbt_squat', { load: 80, v: 0.8, reps: 3, source: 'manual' });
     await addVbtSet(mockDb, 1, 'vbt-1', 'vbt_squat', { load: 100, v: 0.6, reps: 2, source: 'manual' });
     await addDropJump(mockDb, 1, 'dj-1', { boxCm: 30, rsi: 1.6, contactMs: 210, heightCm: 34, flightS: 0.53 });
+  });
+
+  it('fills the reach ruler on the native thread, without laying the page out again every frame', async () => {
+    jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+    const timing = jest.spyOn(Animated, 'timing');
+    const r = await render(<Dunk />);
+    await act(async () => {});
+    // The ruler fills to a share of the way (0–1); a rolling number in cm is text and stays on JS.
+    const fills = timing.mock.calls.filter(([, c]) => c.duration === 600 && typeof c.toValue === 'number' && c.toValue <= 1);
+    expect(fills.length).toBeGreaterThan(0);
+    for (const [, c] of fills) expect(c.useNativeDriver).toBe(true);
+    await act(async () => r.unmount());
+    jest.restoreAllMocks();
   });
 
   it('shows the gap to the dunk line and the limiter with its reasons', async () => {

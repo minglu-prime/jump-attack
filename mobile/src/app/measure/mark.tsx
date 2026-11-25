@@ -32,7 +32,7 @@ function seekToFrame(player: VideoPlayer, frame: number, fps: number) {
 }
 
 export default function Mark() {
-  const params = useLocalSearchParams<{ metric: string; session: string; uri: string; fps: string; from?: string; load?: string; reps?: string; rom?: string; box?: string; asset?: string; queue?: string }>();
+  const params = useLocalSearchParams<{ metric: string; session: string; uri: string; fps: string; from?: string; load?: string; reps?: string; rom?: string; box?: string; asset?: string; queue?: string; source?: string }>();
   const db = useSQLiteContext();
   const { current } = useAthlete();
   const def = getMetric(params.metric);
@@ -81,8 +81,10 @@ export default function Mark() {
   }, [params.uri]);
 
   // Frames are stepped at the file's own rate and measured at the rate they were captured.
-  const { file: fileFps, capture: fps } = markingRates({ detected: detectedFps, chosen: captureOverride, reported: Number(params.fps) || 0 });
-  const looksSlowMo = detectedFps != null && detectedFps < 100;
+  // Filmed in the app: real time, so the frame rate is never asked for (an import may be a slow-motion export).
+  const camera = params.source === 'camera';
+  const { file: fileFps, capture: fps } = markingRates({ detected: detectedFps, chosen: camera ? null : captureOverride, reported: Number(params.fps) || 0 });
+  const looksSlowMo = !camera && detectedFps != null && detectedFps < 100;
   const fpsChoices = detectedFps == null ? FPS_CHOICES : [fileFps, ...FPS_CHOICES.filter((f) => f > fileFps)];
   const total = frameCount(duration, fileFps);
   const last = Math.max(0, total - 1);
@@ -156,7 +158,7 @@ export default function Mark() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <View style={styles.video}>
           <VideoView player={player} nativeControls={false} contentFit="contain" style={StyleSheet.absoluteFill} />
           <View style={styles.frameBadge}>
@@ -185,14 +187,16 @@ export default function Mark() {
           />
         )}
 
-        <View style={styles.fpsRow}>
-          <Text style={styles.label}>{tr('拍摄帧率{p}', { p: detectedFps ? tr('（视频 {detectedFps} fps）', { detectedFps }) : '' })}</Text>
-          <View style={{ flexDirection: 'row', gap: 6 }}>
-            {fpsChoices.map((f) => (
-              <Chip key={f} label={String(f)} selected={f === fps} onPress={() => changeFps(f)} />
-            ))}
+        {!camera && (
+          <View style={styles.fpsRow}>
+            <Text style={styles.label}>{tr('拍摄帧率{p}', { p: detectedFps ? tr('（视频 {detectedFps} fps）', { detectedFps }) : '' })}</Text>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {fpsChoices.map((f) => (
+                <Chip key={f} label={String(f)} selected={f === fps} onPress={() => changeFps(f)} />
+              ))}
+            </View>
           </View>
-        </View>
+        )}
         {looksSlowMo && (
           <Text style={[styles.slowMoHint, fps > fileFps && { color: colors.accent }]}>
             {fps > fileFps

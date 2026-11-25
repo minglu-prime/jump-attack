@@ -6,11 +6,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useBackButton } from '@/components/backButton';
 import { leaveCamera } from '@/components/capture/leave';
 import { Icon } from '@/components/Icon';
 import { FadeIn } from '@/components/motion';
 import { PoseCamera, type CameraErrorStage, type CameraFrame, type CameraInfo, type PoseCameraHandle, type Recorded } from '@/components/PoseCamera';
-import { Button } from '@/components/ui';
+import { Button, Digits } from '@/components/ui';
 import { decodePose } from '@/domain/pose';
 import { checkSetup, SETUP_CHECKS, type GravitySample, type SetupCheck, type SetupFrame, type SetupState } from '@/domain/poseSetup';
 import { decimal, speechLanguage, tr } from '@/i18n';
@@ -72,6 +73,7 @@ export default function TechniqueCamera() {
   const [muted, setMuted] = useState(false);
   const [info, setInfo] = useState<CameraInfo | null>(null);
   const [rec, setRec] = useState<Rec>({ name: 'live' });
+  useBackButton(() => leaveCamera(rec, () => router.back()));
   const [now, setNow] = useState(0);
   const [attempt, setAttempt] = useState(0);
 
@@ -260,9 +262,9 @@ export default function TechniqueCamera() {
               <Pressable accessibilityRole="button" accessibilityLabel={tr('停止录像')} disabled={rec.name === 'stopping'} onPress={stop} style={styles.shutter}>
                 <View style={styles.stopSquare} />
               </Pressable>
-              <Text style={styles.timer}>
-                {clockText(rec.name === 'recording' ? now - rec.since : 0)} / {clockText(MAX_TAKE_S)}
-              </Text>
+              <View style={styles.timer}>
+                <Digits style={styles.timerText}>{`${clockText(rec.name === 'recording' ? now - rec.since : 0)} / ${clockText(MAX_TAKE_S)}`}</Digits>
+              </View>
             </>
           )}
         </View>
@@ -326,7 +328,8 @@ const styles = StyleSheet.create({
   shutterDot: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.record },
   stopSquare: { width: 28, height: 28, borderRadius: 6, backgroundColor: colors.record },
   skip: { color: '#FFFFFF', fontSize: 12, textDecorationLine: 'underline', backgroundColor: glass, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, overflow: 'hidden' },
-  timer: { color: '#FFFFFF', fontFamily: fonts.numeric, fontSize: 18, backgroundColor: glass, paddingHorizontal: 8, borderRadius: 8, overflow: 'hidden' },
+  timer: { backgroundColor: glass, paddingHorizontal: 8, borderRadius: 8 },
+  timerText: { color: '#FFFFFF', fontFamily: fonts.numeric, fontSize: 18 },
   banner: { position: 'absolute', left: 230, right: 110, bottom: 16, backgroundColor: glass, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
   bannerText: { color: '#FFFFFF', fontSize: 16, lineHeight: 22, fontWeight: '600', textAlign: 'center' },
   panelWrap: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },

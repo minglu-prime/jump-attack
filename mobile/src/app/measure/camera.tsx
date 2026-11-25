@@ -6,11 +6,12 @@ import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { captureGuide } from '@/components/capture/guides';
+import { useBackButton } from '@/components/backButton';
 import { leaveCamera } from '@/components/capture/leave';
 import { Icon } from '@/components/Icon';
 import { FadeIn } from '@/components/motion';
 import { PoseCamera, type CameraErrorStage, type CameraInfo, type PoseCameraHandle, type Recorded } from '@/components/PoseCamera';
-import { Button } from '@/components/ui';
+import { Button, Digits } from '@/components/ui';
 import { getMetric } from '@/domain/metrics';
 import { decimal, tr } from '@/i18n';
 import { dropTake, dropTestTakes } from '@/media/takes';
@@ -65,6 +66,7 @@ export default function TestCamera() {
   const camera = useRef<PoseCameraHandle>(null);
   const [info, setInfo] = useState<CameraInfo | null>(null);
   const [rec, setRec] = useState<Rec>({ name: 'live' });
+  useBackButton(() => leaveCamera(rec, () => router.back()));
   const [now, setNow] = useState(0);
   const [attempt, setAttempt] = useState(0);
 
@@ -113,7 +115,9 @@ export default function TestCamera() {
   function use(take: Recorded) {
     camera.current?.stopCamera();
     const params = Object.fromEntries(Object.entries(pass).filter((e): e is [string, string] => e[1] != null));
-    router.replace({ pathname: next, params: { ...params, uri: take.uri, fps: String(Math.round(info?.fps ?? 30)) } });
+    // A jump filmed here is never slow motion: marking and analysis need not ask for its frame rate.
+    const jump = next === '/measure/analyse' || next === '/measure/mark';
+    router.replace({ pathname: next, params: { ...params, uri: take.uri, fps: String(Math.round(info?.fps ?? 30)), ...(jump ? { source: 'camera' } : {}) } });
   }
 
   const live = rec.name === 'live';
@@ -189,9 +193,9 @@ export default function TestCamera() {
               <Pressable accessibilityRole="button" accessibilityLabel={tr('停止录像')} disabled={rec.name === 'stopping'} onPress={stop} style={styles.shutter}>
                 <View style={styles.stopSquare} />
               </Pressable>
-              <Text style={styles.timer}>
-                {clockText(rec.name === 'recording' ? now - rec.since : 0)} / {clockText(maxSeconds)}
-              </Text>
+              <View style={styles.timer}>
+                <Digits style={styles.timerText}>{`${clockText(rec.name === 'recording' ? now - rec.since : 0)} / ${clockText(maxSeconds)}`}</Digits>
+              </View>
             </>
           )}
         </View>
@@ -248,7 +252,8 @@ const styles = StyleSheet.create({
   shutter: { width: 72, height: 72, borderRadius: 36, borderWidth: 4, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   shutterDot: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.record },
   stopSquare: { width: 28, height: 28, borderRadius: 6, backgroundColor: colors.record },
-  timer: { color: '#FFFFFF', fontFamily: fonts.numeric, fontSize: 18, backgroundColor: glass, paddingHorizontal: 8, borderRadius: 8, overflow: 'hidden' },
+  timer: { backgroundColor: glass, paddingHorizontal: 8, borderRadius: 8 },
+  timerText: { color: '#FFFFFF', fontFamily: fonts.numeric, fontSize: 18 },
   banner: { position: 'absolute', backgroundColor: glass, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
   bannerSide: { left: 24, right: 120, bottom: 16 },
   bannerBottom: { left: 16, right: 16, bottom: 150 },

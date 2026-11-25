@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { AccessibilityInfo, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { STATUS_COLOR } from '@/components/dunk';
 import { Icon } from '@/components/Icon';
-import { ease, nextLayout, Turn } from '@/components/motion';
+import { ease, nextLayout, Turn, useReduceMotion } from '@/components/motion';
 import { Card } from '@/components/ui';
 import { openDunkTest } from '@/components/dunkTests';
 import { BLOCKS, MISSING_TEXT, RIM_CM, reachRuler, type DunkDiagnosis, type DunkMetric, type Missing } from '@/domain/dunk';
@@ -47,21 +47,20 @@ export function DunkHero({ diagnosis: d, standingReach }: { diagnosis: DunkDiagn
   const progress = ruler?.progress ?? 0;
   const rim = ruler?.rim ?? null;
 
+  // The fill is a full-width bar scaled from its left edge: a transform runs on the native thread, where animating the
+  // width would lay the page out again every frame.
+  const reduce = useReduceMotion();
   const [fill] = useState(() => new Animated.Value(0));
-  const [width] = useState(() => fill.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }));
   useEffect(() => {
-    let live = true;
-    AccessibilityInfo.isReduceMotionEnabled()
-      .catch(() => false)
-      .then((reduce) => {
-        if (!live) return;
-        if (reduce) fill.setValue(progress);
-        else Animated.timing(fill, { toValue: progress, duration: motion.count, easing: ease, useNativeDriver: false }).start();
-      });
-    return () => {
-      live = false;
-    };
-  }, [fill, progress]);
+    if (reduce == null) return;
+    if (reduce) {
+      fill.setValue(progress);
+      return;
+    }
+    const a = Animated.timing(fill, { toValue: progress, duration: motion.count, easing: ease, useNativeDriver: true });
+    a.start();
+    return () => a.stop();
+  }, [fill, progress, reduce]);
 
   return (
     <Card style={styles.hero}>
@@ -92,7 +91,7 @@ export function DunkHero({ diagnosis: d, standingReach }: { diagnosis: DunkDiagn
                 </View>
               )}
               <View style={styles.track}>
-                <Animated.View style={[styles.fill, { width }]} />
+                <Animated.View style={[styles.fill, { transformOrigin: 'left', transform: [{ scaleX: fill }] }]} />
                 {rim != null && <View style={[styles.rimTick, { left: `${rim * 100}%` }]} />}
               </View>
               <View style={styles.rulerLabels}>
@@ -285,7 +284,7 @@ const styles = StyleSheet.create({
   gapUnit: { color: colors.textMuted, fontSize: 18 },
   ruler: { gap: 4, paddingVertical: 4 },
   track: { height: 10, borderRadius: 5, backgroundColor: colors.surfaceRaised, overflow: 'hidden' },
-  fill: { height: 10, borderRadius: 5, backgroundColor: colors.accent },
+  fill: { width: '100%', height: 10, borderRadius: 5, backgroundColor: colors.accent },
   rimTick: { position: 'absolute', top: 0, bottom: 0, width: 2, marginLeft: -1, backgroundColor: colors.bg },
   rulerLabels: { flexDirection: 'row', justifyContent: 'space-between' },
   rulerText: { color: colors.textMuted, fontFamily: fonts.numeric, fontSize: 13 },

@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { StyleSheet, Text, View, type AccessibilityActionEvent, type GestureResponderEvent, type LayoutChangeEvent } from 'react-native';
 
 import { tick } from '@/components/motion';
+import { Digits } from '@/components/ui';
 import { frameAt, moveHandle, nudgeHandle, xOf, type Handle, type Span } from '@/domain/trim';
 import { decimal, tr } from '@/i18n';
 import { colors, fonts } from '@/theme';
@@ -119,9 +120,9 @@ export function TrimBar({ total, span, frame, fps, thumbnails, onChange, onScrub
         {handle('to')}
       </View>
       <View style={styles.times}>
-        <Text style={styles.time}>{seconds(span.from)} s</Text>
+        <Digits style={styles.time}>{`${seconds(span.from)} s`}</Digits>
         <Text style={styles.chosen}>{tr('已选 {s} s', { s: seconds(span.to - span.from) })}</Text>
-        <Text style={styles.time}>{seconds(span.to)} s</Text>
+        <Digits style={styles.time}>{`${seconds(span.to)} s`}</Digits>
       </View>
     </View>
   );

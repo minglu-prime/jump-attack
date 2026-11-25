@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/Icon';
-import { Button } from '@/components/ui';
+import { Button, LoadFailed, Loading } from '@/components/ui';
 import { athleteName } from '@/domain/athletes';
 import type { TeamRow } from '@/domain/team';
 import { decimal, tr } from '@/i18n';
@@ -16,19 +16,32 @@ import { colors, fonts, radius, text } from '@/theme';
 export default function Team() {
   const db = useSQLiteContext();
   const { athletes, select } = useAthlete();
-  const [rows, setRows] = useState<TeamRow[]>([]);
+  const [rows, setRows] = useState<TeamRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadTeam(db, athletes).then(setRows);
-    }, [db, athletes]),
-  );
+  const load = useCallback(() => {
+    let alive = true;
+    loadTeam(db, athletes).then(
+      (r) => {
+        if (!alive) return;
+        setRows(r);
+        setError(null);
+      },
+      (e) => alive && setError(String(e)),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [db, athletes]);
+  useFocusEffect(load);
 
   const open = (id: number) => {
     select(id);
     router.push('/dunk');
   };
 
+  if (error) return <LoadFailed title={tr('团队没加载出来')} error={error} onRetry={load} />;
+  if (!rows) return <Loading />;
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <Text style={text.muted}>{tr('按离各自扣篮线的差距排，扣篮线按每个人自己的篮筐高度和过筐余量算。点一个人看他的扣篮诊断。')}</Text>

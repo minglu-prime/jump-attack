@@ -1,14 +1,14 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BlockReason, blockLabel, RetestCard, SuggestionCard } from '@/components/blocks';
 import { Icon } from '@/components/Icon';
 import { AdjustmentNote, SessionItems, WeekStrip, type DayStatus } from '@/components/training';
 import { FadeIn } from '@/components/motion';
-import { Button, Card, LoadFailed } from '@/components/ui';
+import { Button, Card, LoadFailed, Loading } from '@/components/ui';
 import { newSessionId } from '@/db/repo';
 import { listPain } from '@/db/pain';
 import { insertDeload } from '@/db/training';
@@ -73,7 +73,7 @@ export default function Train() {
   if (!loaded) {
     return (
       <SafeAreaView style={[styles.screen, styles.center]}>
-        <ActivityIndicator color={colors.accent} />
+        <Loading />
       </SafeAreaView>
     );
   }
@@ -96,10 +96,26 @@ export default function Train() {
               selected={selected}
               onSelect={setSelected}
               starting={starting}
-              onDeload={async () => {
-                await insertDeload(db, data.plan, today);
-                await load();
-              }}
+              onDeload={() =>
+                // Every later week moves back one and there is no taking it out again: ask before doing it.
+                Alert.alert(tr('从今天开始减量周？'), tr('接下来 {DELOAD_DAYS} 天按减量版练，之后的计划顺延一周。', { DELOAD_DAYS }), [
+                  { text: tr('取消'), style: 'cancel' },
+                  {
+                    text: tr('开始减量周'),
+                    onPress: async () => {
+                      setStarting(true);
+                      try {
+                        await insertDeload(db, data.plan, today);
+                        await load();
+                      } catch (e) {
+                        Alert.alert(tr('没能开始减量周'), String(e));
+                      } finally {
+                        setStarting(false);
+                      }
+                    },
+                  },
+                ])
+              }
               onSuggestion={async (accept) => {
                 if (!advice.suggestion) return;
                 setStarting(true);
@@ -107,6 +123,8 @@ export default function Train() {
                   if (accept) await acceptBlockSuggestion(db, data, advice.suggestion, advice.diagnosis, today);
                   else await declineBlockSuggestion(db, data, advice.suggestion, today);
                   await load();
+                } catch (e) {
+                  Alert.alert(tr('保存失败'), String(e));
                 } finally {
                   setStarting(false);
                 }
@@ -252,7 +270,7 @@ function PlanView({
         <Card style={styles.deload}>
           <Text style={[text.section, { color: colors.warn }]}>{tr('建议插入一周减量')}</Text>
           <Text style={text.muted}>{tr('最近 {streak} 次测量都有疲劳信号。从今天起练 {DELOAD_DAYS} 天减量版（组数约 −40%，RPE −1.5，取消最大强度），之后的计划顺延一周。', { streak: readiness.streak, DELOAD_DAYS })}</Text>
-          <Button label={tr('从今天开始减量周')} onPress={onDeload} />
+          <Button label={tr('从今天开始减量周')} onPress={onDeload} busy={starting} />
         </Card>
       )}
 

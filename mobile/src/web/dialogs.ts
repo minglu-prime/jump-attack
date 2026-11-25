@@ -13,8 +13,9 @@ function joined(title: string, message?: string): string {
 }
 
 /**
- * Alert.alert on top of the browser's own dialogs. The app only ever shows one button
- * (or none) or a cancel/action pair, so a confirm box covers every call: OK runs the action.
+ * Alert.alert on top of the browser's own dialogs. A confirm box per action, in order: OK runs that action,
+ * Cancel moves on to the next one, and declining them all is the cancel button. With one action that is a
+ * single confirm; with two (keep this device's data / keep the cloud's) neither one is out of reach.
  */
 export function showAlert(title: string, message: string | undefined, buttons: AlertButton[] | undefined, browser: BrowserDialogs): void {
   if (!buttons || buttons.length <= 1) {
@@ -23,8 +24,8 @@ export function showAlert(title: string, message: string | undefined, buttons: A
     return;
   }
   const cancel = buttons.find((b) => b.style === 'cancel') ?? buttons[0];
-  const action = buttons.find((b) => b !== cancel)!;
-  const chosen = browser.confirm(joined(title, tr('{p}（确定 = {text}）', { p: message ? `${message}\n\n` : '', text: action.text }))) ? action : cancel;
+  const p = message ? `${message}\n\n` : '';
+  const chosen = buttons.filter((b) => b !== cancel).find((b) => browser.confirm(joined(title, tr('{p}（确定 = {text}）', { p, text: b.text })))) ?? cancel;
   chosen.onPress?.();
 }
 

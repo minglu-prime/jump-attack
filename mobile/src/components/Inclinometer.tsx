@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Button } from '@/components/ui';
+import { Button, Digits } from '@/components/ui';
 import { angleBetween } from '@/domain/mobility';
 import { tr } from '@/i18n';
 import { needsMotionPermission, requestMotionPermission, startGravity, type Vec } from '@/media/gravity';
@@ -46,10 +46,10 @@ export function Inclinometer({ onUse }: { onUse: (degrees: number) => void }) {
 
   return (
     <View style={styles.box}>
-      <Text style={styles.angle}>
-        {angle != null ? Math.round(angle) : '—'}
-        <Text style={styles.deg}>°</Text>
-      </Text>
+      <View style={styles.angleRow}>
+        <Digits style={styles.angle}>{angle != null ? String(Math.round(angle)) : '—'}</Digits>
+        <Text style={[styles.angle, styles.deg]}>°</Text>
+      </View>
       <Text style={styles.hint}>{zero ? tr('移动到最大位置，手机停稳后点「用这个角度」') : tr('在起始位置把手机贴稳，点「归零」')}</Text>
       <View style={styles.buttons}>
         <Button
@@ -67,6 +67,7 @@ export function Inclinometer({ onUse }: { onUse: (degrees: number) => void }) {
 
 const styles = StyleSheet.create({
   box: { gap: 8, padding: 14, borderRadius: radius.chip, backgroundColor: colors.bg, alignItems: 'center' },
+  angleRow: { flexDirection: 'row', alignItems: 'baseline' },
   angle: { color: colors.purple, fontFamily: fonts.numericBold, fontSize: 56, lineHeight: 60 },
   deg: { color: colors.textMuted, fontSize: 24 },
   hint: { color: colors.textMuted, fontSize: 12, textAlign: 'center' },

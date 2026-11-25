@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon } from '@/components/Icon';
 import { FadeIn } from '@/components/motion';
 import { Button, Empty, LoadFailed, Loading } from '@/components/ui';
 import { endPlan } from '@/db/training';
@@ -118,13 +119,15 @@ export default function PlanOverview() {
                 const status = w?.finishedAt ? tr('已完成') : w ? tr('进行中') : p.date === today ? tr('今天') : daysBetween(p.date, today) > 0 ? tr('未练') : '';
                 const color = w?.finishedAt ? colors.good : w ? colors.warn : p.date === today ? colors.accent : colors.textMuted;
                 const canOpen = daysBetween(p.date, today) >= 0;
+                // Today's session opens before it is started (the workout screen starts it); past ones are made up from the training tab.
+                const opens = Boolean(w) || p.date === today;
                 return (
                   <Pressable
                     key={p.date}
                     accessibilityRole="button"
-                    // Today's session opens before it is started (the workout screen starts it); past ones are made up from the training tab.
-                    disabled={!w && p.date !== today}
-                    onPress={() => router.push({ pathname: '/workout/[date]', params: { date: p.date } })}
+                    disabled={!opens}
+                    // The goal day's own actions (touch test, dunk attempts) are on the training tab, as from the home screen.
+                    onPress={() => (p.goal === 'test' ? router.push('/train') : router.push({ pathname: '/workout/[date]', params: { date: p.date } }))}
                     style={styles.row}
                   >
                     <Text style={styles.date}>{shortDate(p.date)}</Text>
@@ -132,6 +135,7 @@ export default function PlanOverview() {
                       {p.session.code} · {p.session.name}
                     </Text>
                     <Text style={[styles.status, { color }]}>{canOpen || w ? status : ''}</Text>
+                    {opens && <Icon name="chevronRight" size={16} color={colors.textMuted} />}
                   </Pressable>
                 );
               })}

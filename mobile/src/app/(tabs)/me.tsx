@@ -29,6 +29,22 @@ export default function Me() {
   // The profile as it was just saved; the form says so until it is edited or replaced (an import, another athlete).
   const [savedAs, setSavedAs] = useState<string | null>(null);
   const shown = current ? JSON.stringify(current) : null;
+  // Changes typed into the profile and not saved yet: switching athlete would throw them away, so it asks first.
+  const edited = useRef(false);
+  const leaveProfile = (go: () => void) => {
+    if (!edited.current) return go();
+    Alert.alert(tr('档案还没保存'), tr('换人后，刚才改的档案不会保存。'), [
+      { text: tr('继续编辑'), style: 'cancel' },
+      {
+        text: tr('不保存，换人'),
+        style: 'destructive',
+        onPress: () => {
+          edited.current = false;
+          go();
+        },
+      },
+    ]);
+  };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -36,7 +52,7 @@ export default function Me() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Text style={text.title}>{tr('我的')}</Text>
 
-          <Athletes />
+          <Athletes leaveProfile={leaveProfile} />
 
           {/* Keyed on the whole row so the form starts fresh when switching athlete or when an import replaces the profile. */}
           {current && (
@@ -44,7 +60,9 @@ export default function Me() {
               key={shown}
               athlete={current}
               saved={savedAs != null && savedAs === shown}
+              onEdit={() => (edited.current = true)}
               onSaved={async (athlete) => {
+                edited.current = false;
                 setSavedAs(JSON.stringify(athlete));
                 await reload();
               }}
@@ -93,7 +111,7 @@ function LanguagePicker() {
 }
 
 /** Everyone who uses this phone: pick whose data the app shows, add people, and move one person's data in or out. */
-function Athletes() {
+function Athletes({ leaveProfile }: { leaveProfile: (go: () => void) => void }) {
   const db = useSQLiteContext();
   const { athletes, current, select, reload } = useAthlete();
   const [name, setName] = useState('');
@@ -168,7 +186,7 @@ function Athletes() {
       {athletes.map((a) => {
         const selected = a.id === current?.id;
         return (
-          <Pressable key={a.id} accessibilityRole="radio" accessibilityState={{ selected }} onPress={() => select(a.id)} style={[styles.athlete, selected && styles.athleteSelected]}>
+          <Pressable key={a.id} accessibilityRole="radio" accessibilityState={{ selected }} onPress={() => !selected && leaveProfile(() => select(a.id))} style={[styles.athlete, selected && styles.athleteSelected]}>
             <Icon name="user" size={18} color={selected ? colors.accent : colors.textMuted} />
             <Text style={[styles.athleteName, selected && { color: colors.accent }]}>{athleteName(a.name)}</Text>
             {selected && <Icon name="check" size={18} color={colors.accent} />}
@@ -180,16 +198,16 @@ function Athletes() {
           accessibilityLabel={tr('新运动员的名字')}
           value={name}
           onChangeText={setName}
-          onSubmitEditing={add}
+          onSubmitEditing={() => leaveProfile(add)}
           placeholder={tr('添加一个人：输入名字')}
           placeholderTextColor={colors.textFaint}
           returnKeyType="done"
           style={[styles.input, { flex: 1 }]}
         />
-        <Button label={tr('添加')} variant="secondary" onPress={add} disabled={!name.trim()} style={{ paddingHorizontal: 18 }} />
+        <Button label={tr('添加')} variant="secondary" onPress={() => leaveProfile(add)} disabled={!name.trim()} style={{ paddingHorizontal: 18 }} />
       </View>
       {athletes.length > 1 && (
-        <Pressable accessibilityRole="button" onPress={() => router.push('/team')} style={styles.athlete}>
+        <Pressable accessibilityRole="button" onPress={() => leaveProfile(() => router.push('/team'))} style={styles.athlete}>
           <Icon name="trend" size={18} color={colors.textMuted} />
           <Text style={styles.athleteName}>{tr('团队总览')}</Text>
           <Icon name="chevronRight" size={18} color={colors.textMuted} />
@@ -197,14 +215,14 @@ function Athletes() {
       )}
       <View style={styles.addRow}>
         {current && <Button label={tr('导出 {name} 的数据', { name: athleteName(current.name) })} variant="ghost" onPress={exportFile} busy={busy === 'export'} style={{ flex: 1 }} />}
-        <Button label={tr('导入运动员')} variant="ghost" onPress={importFile} busy={busy === 'import'} style={{ flex: 1 }} />
+        <Button label={tr('导入运动员')} variant="ghost" onPress={() => leaveProfile(importFile)} busy={busy === 'import'} style={{ flex: 1 }} />
       </View>
       <Text style={styles.footnote}>{tr('一台手机可以记好几个人，测之前先点选是谁。导出的文件只含这个人的数据，可以发给本人导入到他自己的手机；云端同步备份的是这台手机上的所有人。')}</Text>
     </View>
   );
 }
 
-function ProfileForm({ athlete, saved, onSaved }: { athlete: Athlete; saved: boolean; onSaved: (saved: Athlete) => Promise<void> }) {
+function ProfileForm({ athlete, saved, onEdit, onSaved }: { athlete: Athlete; saved: boolean; onEdit: () => void; onSaved: (saved: Athlete) => Promise<void> }) {
   const db = useSQLiteContext();
   const [name, setName] = useState(athleteName(athlete.name));
   const [mass, setMass] = useState(athlete.body_mass_kg?.toString() ?? '');
@@ -220,6 +238,7 @@ function ProfileForm({ athlete, saved, onSaved }: { athlete: Athlete; saved: boo
   const edit = (set: (v: string) => void) => (v: string) => {
     set(v);
     setEdited(true);
+    onEdit();
   };
   const goalDate = parseGoalDate(goal);
   const profile = readProfile({ mass, reach, leg, squat, rim, clearance });
@@ -247,6 +266,7 @@ function ProfileForm({ athlete, saved, onSaved }: { athlete: Athlete; saved: boo
       };
       await updateAthlete(db, next);
       await onSaved(next);
+      setEdited(false);
     } catch (e) {
       setSaveError(tr('没保存上：{e}', { e: String(e) }));
     } finally {
@@ -280,7 +300,7 @@ function ProfileForm({ athlete, saved, onSaved }: { athlete: Athlete; saved: boo
       </Text>
       {!profile.ok && <Text style={[styles.footnote, { color: colors.warn }]}>{profile.problem}</Text>}
       {saveError && <Text style={[styles.footnote, { color: colors.warn }]}>{saveError}</Text>}
-      <Button label={justSaved ? tr('已保存') : tr('保存')} onPress={save} busy={saving} disabled={justSaved || !name.trim() || !goalDate.ok || !profile.ok} />
+      <Button label={justSaved ? tr('已保存') : tr('保存')} onPress={save} busy={saving} disabled={!edited || !name.trim() || !goalDate.ok || !profile.ok} />
     </View>
   );
 }

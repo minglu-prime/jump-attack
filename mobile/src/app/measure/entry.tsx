@@ -46,7 +46,7 @@ export default function ManualEntry() {
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <Stack.Screen options={{ title: def.name }} />
       {/* The button sits right under the field: the number pad has no return key and would cover anything lower. */}
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets keyboardDismissMode="on-drag">
         <Text style={text.muted}>{def.entryHint ?? tr('输入这一次的成绩')}</Text>
         {askTiming && (
           <View style={{ gap: 8 }}>

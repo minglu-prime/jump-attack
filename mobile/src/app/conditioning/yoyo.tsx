@@ -32,7 +32,6 @@ function buildCues(): Cue[] {
   return cues;
 }
 
-const CUES = buildCues();
 
 export default function YoyoTest() {
   const [phase, setPhase] = useState<'intro' | 'running' | 'confirm'>('intro');
@@ -69,7 +68,9 @@ export default function YoyoTest() {
 function Running({ startAt, onStop }: { startAt: number; onStop: (completed: number) => void }) {
   useKeepAwake();
   const player = useCues();
-  const t = useTimeline(startAt, CUES, player);
+  // Built here, not at module load: tr() must see the language the app is in now (i18n rule).
+  const [cues] = useState(buildCues);
+  const t = useTimeline(startAt, cues, player);
   const state = yoyoStateAt(Math.max(0, t));
   const done = state.phase === 'done';
 
@@ -83,8 +84,10 @@ function Running({ startAt, onStop }: { startAt: number; onStop: (completed: num
   const phaseColor = t < 0 || state.phase === 'rest' ? colors.good : colors.accent;
   const toBeep = t < 0 ? -t : state.toBeep;
 
+  const stop = () => confirmStop(() => onStop(yoyoCompletedAt((Date.now() - startAt) / 1000)));
+
   return (
-    <RunningScreen>
+    <RunningScreen onBack={stop}>
       <SafeAreaView style={runStyles.screen}>
         <View style={[runStyles.body, { justifyContent: 'center' }]}>
           <Text style={runStyles.label}>{tr('{p} · 第 {n} 趟 · {speedKmh} km/h', { p: state.phase === 'rest' || t < 0 ? tr('下一趟') : tr('当前'), n: shuttle.n, speedKmh: shuttle.speedKmh })}</Text>
@@ -93,17 +96,17 @@ function Running({ startAt, onStop }: { startAt: number; onStop: (completed: num
           <Digits style={styles.countdown}>{decimal(toBeep, 1)}</Digits>
           <View style={runStyles.stats}>
             <View style={runStyles.stat}>
-              <Text style={runStyles.statValue}>{yoyoDistance(yoyoCompletedAt(t))}</Text>
+              <Digits style={runStyles.statValue}>{String(yoyoDistance(yoyoCompletedAt(t)))}</Digits>
               <Text style={runStyles.statLabel}>{tr('已完成 m')}</Text>
             </View>
             <View style={runStyles.stat}>
-              <Text style={runStyles.statValue}>{clock(Math.max(0, t))}</Text>
+              <Digits style={runStyles.statValue}>{clock(Math.max(0, t))}</Digits>
               <Text style={runStyles.statLabel}>{tr('用时')}</Text>
             </View>
           </View>
         </View>
         <View style={runStyles.footer}>
-          <Button label={tr('结束测试')} variant="secondary" style={{ flex: 1 }} onPress={() => confirmStop(() => onStop(yoyoCompletedAt((Date.now() - startAt) / 1000)))} />
+          <Button label={tr('结束测试')} variant="secondary" style={{ flex: 1 }} onPress={stop} />
         </View>
       </SafeAreaView>
     </RunningScreen>

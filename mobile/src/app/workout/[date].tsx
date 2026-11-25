@@ -1,15 +1,15 @@
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import { AccessibilityInfo, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
-import { FadeIn, nextLayout, Swap } from '@/components/motion';
+import { FadeIn, nextLayout, Swap, useReduceMotion } from '@/components/motion';
 import { ScoreScale } from '@/components/ScoreScale';
 import { AdjustmentNote } from '@/components/training';
-import { Button, Card, Empty } from '@/components/ui';
+import { Button, Card, Empty, LoadFailed, Loading } from '@/components/ui';
 import { listPain, listTestJumps, setPain } from '@/db/pain';
 import { finishWorkout, getWorkout, lastLoads, listSets, logSet, setSessionLoad, unlogSet, type Workout } from '@/db/training';
 import { addVbtSet, listVbtSets } from '@/db/vbt';
@@ -51,6 +51,9 @@ export default function WorkoutScreen() {
   const { current } = useAthlete();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [finishing, setFinishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
+  const reduce = useReduceMotion();
 
   const reload = useCallback(async () => {
     if (!current) return;
@@ -76,13 +79,28 @@ export default function WorkoutScreen() {
     setLoaded({ data, workout, sets, loads, suggested, day, warmupKg: Object.fromEntries(warmups), personal, knee, pain, testJumps });
   }, [db, current, date]);
 
-  useFocusEffect(
-    useCallback(() => {
-      reload();
-    }, [reload]),
-  );
+  const open = useCallback(() => {
+    reload().then(
+      () => setError(null),
+      (e) => setError(String(e)),
+    );
+  }, [reload]);
+  useFocusEffect(open);
 
-  if (loaded === null) return null;
+  if (error) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <LoadFailed title={tr('训练没加载出来')} error={error} onRetry={open} />
+      </SafeAreaView>
+    );
+  }
+  if (loaded === null) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <Loading />
+      </SafeAreaView>
+    );
+  }
   const planned = loaded !== 'none' && planDay(loaded.data.template, loaded.data.plan, date);
   if (loaded === 'none' || !planned) {
     return (
@@ -149,6 +167,8 @@ export default function WorkoutScreen() {
         // The summary opens at the top and the footer turns into 返回: both ease in rather than jump.
         nextLayout();
         await reload();
+        // Pressed at the bottom of the page: bring the summary (RPE, minutes, knee) into view instead of leaving it above.
+        scroll.current?.scrollTo({ y: 0, animated: reduce === false });
       } catch (e) {
         Alert.alert(tr('没能完成训练'), String(e));
       } finally {
@@ -168,7 +188,7 @@ export default function WorkoutScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <Stack.Screen options={{ title: `${session.code} · ${session.name}` }} />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+      <ScrollView ref={scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Text style={text.muted}>
           {shortDate(date)} · {session.focus}
         </Text>
@@ -241,7 +261,7 @@ export default function WorkoutScreen() {
               const prevKg = logged(p.code, n - 1)?.load_kg ?? suggested[p.code]?.kg ?? fromLast(p.code)?.kg ?? null;
               return (
                 <SetRow
-                  key={`${n}-${entry ? 'done' : 'open'}`}
+                  key={n}
                   p={p}
                   setNo={n}
                   entry={entry}
@@ -338,6 +358,17 @@ function SetRow({
   const [kg, setKg] = useState(entry?.load_kg != null ? String(entry.load_kg) : '');
   const [rpe, setRpe] = useState(entry?.rpe != null ? formatRpe(entry.rpe) : '');
   const [v, setV] = useState(entry?.mean_velocity != null ? decimal(entry.mean_velocity, 2) : '');
+  // A ticked set shows what was logged; taking the tick back leaves those numbers in place to fix, not blank boxes.
+  const [shown, setShown] = useState(entry);
+  if (entry !== shown) {
+    setShown(entry);
+    if (entry) {
+      setReps(String(entry.reps));
+      setKg(entry.load_kg != null ? String(entry.load_kg) : '');
+      setRpe(entry.rpe != null ? formatRpe(entry.rpe) : '');
+      setV(entry.mean_velocity != null ? decimal(entry.mean_velocity, 2) : '');
+    }
+  }
   const checked = entry != null;
   const num = (s: string) => (s.trim() === '' ? null : Number(s.replace(',', '.')));
   const below = entry?.mean_velocity != null && minV != null && entry.mean_velocity < minV;
@@ -434,17 +465,39 @@ function SessionLoad({ workout, onSave }: { workout: Workout; onSave: (v: { rpe:
   const [minutes, setMinutes] = useState(String(workout.durationMin ?? workoutMinutes(workout.startedAt, workout.finishedAt) ?? ''));
   const rpe = workout.sessionRpe ?? null;
   const typed = parseNumber(minutes);
+  // The number pad has no return key, so the box may never lose focus before the page is left: minutes typed and not
+  // yet saved are saved on the way out.
+  const unsaved = useRef<{ rpe: number | null; minutes: number | null } | null>(null);
+  const save = useRef(onSave);
+  useEffect(() => {
+    save.current = onSave;
+  }, [onSave]);
+  useEffect(
+    () => () => {
+      if (unsaved.current) save.current(unsaved.current);
+    },
+    [],
+  );
   const load = sessionLoad(workout.durationMin ?? null, rpe);
   return (
     <View style={{ gap: 8 }}>
-      <ScoreScale label={tr('整节课多累（RPE）')} value={rpe} onPick={(r) => onSave({ rpe: r, minutes: typed })} hint={tr('0 很轻松 · 10 用尽全力')} />
+      <ScoreScale label={tr('整节课多累（RPE）')} value={rpe} onPick={(r) => {
+          unsaved.current = null;
+          onSave({ rpe: r, minutes: typed });
+        }} hint={tr('0 很轻松 · 10 用尽全力')} />
       <View style={styles.minutes}>
         <Text style={styles.minutesLabel}>{tr('训练时长')}</Text>
         <TextInput
           value={minutes}
-          onChangeText={setMinutes}
+          onChangeText={(t) => {
+            setMinutes(t);
+            unsaved.current = { rpe, minutes: parseNumber(t) };
+          }}
           // onBlur, not onEndEditing: react-native-web never calls onEndEditing, so the web app never saved the minutes.
-          onBlur={() => onSave({ rpe, minutes: typed })}
+          onBlur={() => {
+            unsaved.current = null;
+            onSave({ rpe, minutes: typed });
+          }}
           keyboardType="number-pad"
           accessibilityLabel={tr('训练时长（分钟）')}
           style={styles.minutesInput}
