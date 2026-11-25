@@ -228,6 +228,27 @@ it('trims the clip like the Photos app, and analyses the part kept by itself onc
   expect(texts(r.root)).toContain('认出 1 跳，计入 1 跳');
 });
 
+it('holds the automatic start while the frame rate is being picked or the clip scrubbed through', async () => {
+  await open(defaultScene('cmj', { shadow: 0.4 }), { metric: 'cmj', session: 'cmj-hold' });
+  const handle = r.root.find((n) => n.props.accessibilityLabel === '片段开始' && typeof n.props.onAccessibilityAction === 'function');
+  const strip = () => r.root.find((n) => typeof n.props.onScrub === 'function');
+  jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
+  try {
+    await act(async () => handle.props.onAccessibilityAction({ nativeEvent: { actionName: 'increment' } }));
+    await act(async () => jest.advanceTimersByTime(1500));
+    // Choosing the frame rate is still setting up: the countdown starts over instead of running the old rate.
+    await press(r.root, '240');
+    await act(async () => jest.advanceTimersByTime(1500));
+    await act(async () => strip().props.onScrub(40));
+    await act(async () => jest.advanceTimersByTime(1500));
+    expect(mockWeb.inject).not.toHaveBeenCalled();
+    await act(async () => jest.advanceTimersByTime(500));
+  } finally {
+    jest.useRealTimers();
+  }
+  expect(mockWeb.inject).toHaveBeenCalled();
+});
+
 it('scores no 10/5 from a set cut short, and says why nothing can be saved', async () => {
   const full = defaultScene('repeat', { shadow: 0.4 });
   const scene = { ...full, hops: full.hops!.slice(0, 2), durationS: 3 };

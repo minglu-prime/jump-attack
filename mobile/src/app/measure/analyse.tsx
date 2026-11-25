@@ -171,7 +171,11 @@ export default function Analyse() {
     if (vx < 0 || vy < 0 || vx > clip.width || vy > clip.height) return;
     tick();
     setTarget({ x: vx, y: vy, frame });
-    // Tapping the athlete after trimming: the countdown starts over.
+    holdStart();
+  }
+
+  /** Still setting up (tapping the athlete, scrubbing, picking the frame rate): an armed countdown starts over. */
+  function holdStart() {
     setArmed((a) => (a == null ? a : a + 1));
   }
 
@@ -390,7 +394,10 @@ export default function Analyse() {
                 setRange(next);
                 show(next[moved]);
               }}
-              onScrub={show}
+              onScrub={(f) => {
+                holdStart();
+                show(f);
+              }}
               onRelease={() => setArmed((a) => (a ?? 0) + 1)}
             />
             <Text style={styles.lead}>
@@ -403,7 +410,11 @@ export default function Analyse() {
                 <Text style={styles.muted}>{tr('拍摄帧率{p}', { p: detectedFps ? tr('（视频 {detectedFps} fps）', { detectedFps }) : '' })}</Text>
                 <View style={{ flexDirection: 'row', gap: 6 }}>
                   {fpsChoices.map((f) => (
-                    <Chip key={f} label={String(f)} selected={f === fps} onPress={() => setCaptureOverride(f)} />
+                    <Chip key={f} label={String(f)} selected={f === fps} onPress={() => {
+                        holdStart();
+                        setCaptureOverride(f);
+                      }}
+                    />
                   ))}
                 </View>
               </View>
