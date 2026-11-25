@@ -1930,4 +1930,8 @@ export const en: Record<string, string> = {
   '下蹲高度': 'Squat height',
   '过筐余量': 'Clearance',
   '{name}要填一个数': '{name} needs to be a number',
+  '从今天开始减量周？': 'Start the deload week today?',
+  '接下来 {DELOAD_DAYS} 天按减量版练，之后的计划顺延一周。': 'The next {DELOAD_DAYS} days use the deload version, and the rest of the plan moves back a week.',
+  '开始减量周': 'Start deload week',
+  '没能开始减量周': 'Couldn’t start the deload week',
 };

@@ -298,8 +298,16 @@ describe('recovery and the training tab', () => {
     await saveRecoveryDay(mockDb, 1, { date: addDays(today, -2), hrv: 49, rhr: 57, sleep: 6, resp: null });
     const r = await render(<Train />);
     expect(texts(r.root)).toContain('建议插入一周减量');
+    // It moves every later week back and there is no taking it out again, so it asks first.
+    const alert = jest.spyOn(Alert, 'alert');
+    const answer = (text: string) => alert.mockImplementationOnce((_t, _m, buttons) => buttons?.find((b) => b.text === text)?.onPress?.());
+    answer('取消');
+    await press(r.root, '从今天开始减量周');
+    expect((await getActivePlan(mockDb, 1))!.deloads).toEqual([]);
+    answer('开始减量周');
     await press(r.root, '从今天开始减量周');
     expect((await getActivePlan(mockDb, 1))!.deloads).toEqual([today]);
+    alert.mockRestore();
     const t = texts(r.root);
     expect(t).toContain('插入的减量周');
     expect(t).not.toContain('建议插入一周减量');

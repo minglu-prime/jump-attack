@@ -72,7 +72,7 @@ export function SuggestionCard({ suggestion, busy, onAccept, onDecline }: { sugg
       </Text>
       <View style={styles.actions}>
         <Button label={s.kind === 'switch' ? tr('换块') : tr('提前进入')} onPress={onAccept} busy={busy} style={{ flex: 1 }} />
-        <Button label={s.kind === 'switch' ? tr('继续{name}', { name: BLOCKS[s.from].name }) : tr('按原计划')} variant="ghost" onPress={onDecline} style={{ flex: 1 }} />
+        <Button label={s.kind === 'switch' ? tr('继续{name}', { name: BLOCKS[s.from].name }) : tr('按原计划')} variant="ghost" onPress={onDecline} disabled={busy} style={{ flex: 1 }} />
       </View>
     </Card>
   );
