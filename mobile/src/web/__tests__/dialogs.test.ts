@@ -65,3 +65,28 @@ it('patches Alert.alert and Alert.prompt on the web', () => {
   expect(b.shown.at(-1)).toBe('prompt:添加测试对象\n\n输入名字');
   expect(named).toHaveBeenCalledWith('小王');
 });
+
+it('offers every action in turn when there is more than one, so none is unreachable', () => {
+  const phone = jest.fn();
+  const cloud = jest.fn();
+  const later = jest.fn();
+  const buttons: AlertButton[] = [
+    { text: '以后再说', style: 'cancel', onPress: later },
+    { text: '用手机上的', onPress: phone },
+    { text: '用云端的', onPress: cloud },
+  ];
+  const answers = [false, true];
+  const b: BrowserDialogs & { shown: string[] } = { ...browser(), shown: [] };
+  b.confirm = (m) => (b.shown.push(`confirm:${m}`), answers.shift() ?? false);
+  showAlert('数据不一样', '选一份', buttons, b);
+  expect(b.shown).toEqual(['confirm:数据不一样\n\n选一份\n\n（确定 = 用手机上的）', 'confirm:数据不一样\n\n选一份\n\n（确定 = 用云端的）']);
+  expect(cloud).toHaveBeenCalledTimes(1);
+  expect(phone).not.toHaveBeenCalled();
+  expect(later).not.toHaveBeenCalled();
+
+  // Declining every action is the cancel button.
+  const none = browser({ confirm: false });
+  showAlert('数据不一样', '选一份', buttons, none);
+  expect(none.shown).toHaveLength(2);
+  expect(later).toHaveBeenCalledTimes(1);
+});
