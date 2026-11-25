@@ -1934,4 +1934,8 @@ export const en: Record<string, string> = {
   '接下来 {DELOAD_DAYS} 天按减量版练，之后的计划顺延一周。': 'The next {DELOAD_DAYS} days use the deload version, and the rest of the plan moves back a week.',
   '开始减量周': 'Start deload week',
   '没能开始减量周': 'Couldn’t start the deload week',
+  '档案还没保存': 'Profile not saved',
+  '换人后，刚才改的档案不会保存。': 'Switching now drops the profile changes you just made.',
+  '继续编辑': 'Keep editing',
+  '不保存，换人': 'Switch without saving',
 };
