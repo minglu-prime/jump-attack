@@ -49,8 +49,9 @@ export function ScoreScale({
 
 const styles = StyleSheet.create({
   label: { color: colors.text, fontSize: 14, fontWeight: '600' },
-  row: { flexDirection: 'row', justifyContent: 'space-between' },
-  dot: { width: 28, height: 32, borderRadius: 8, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  // The eleven boxes share the row: fixed 28 px boxes ran past the card on a 375 pt phone.
+  row: { flexDirection: 'row', gap: 3 },
+  dot: { flex: 1, maxWidth: 40, height: 32, borderRadius: 8, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   num: { color: colors.textMuted, fontFamily: fonts.numeric, fontSize: 15 },
   hint: { color: colors.textMuted, fontSize: 11 },
 });
