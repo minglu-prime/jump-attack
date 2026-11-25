@@ -1,6 +1,6 @@
 // An exercise's demo page: the drawn positions and steps for everyone, and a clip the athlete filmed themselves.
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
-import { Text } from 'react-native';
+import { Alert, Text, type AlertButton } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
 import { deleteDemoClip, demoClip, saveDemoClip } from '@/media/demos';
@@ -64,6 +64,8 @@ it('swaps in a clip the athlete filmed, kept on this phone only, and can remove 
   expect(saveDemoClip).toHaveBeenCalledWith('pogo', 'file:///picked/pogo.mov');
   expect(texts(r.root)).toContain('删掉自己的视频');
 
+  // Removing it asks first (see the next test); here the removal is confirmed.
+  jest.spyOn(Alert, 'alert').mockImplementationOnce((_t, _m, buttons?: AlertButton[]) => buttons?.find((b) => b.style === 'destructive')?.onPress?.());
   await act(async () => pressable(r.root, '删掉自己的视频').props.onPress());
   expect(deleteDemoClip).toHaveBeenCalledWith('pogo');
   expect(texts(r.root)).toContain('用自己拍的视频');
@@ -77,4 +79,16 @@ it('turns down a clip longer than 30 seconds', async () => {
   await act(async () => pressable(r.root, '用自己拍的视频').props.onPress());
   expect(saveDemoClip).not.toHaveBeenCalled();
   expect(texts(r.root)).toContain('这段有 95 秒，示范剪到 30 秒以内再选');
+});
+
+it('asks before removing the athlete’s own clip, which cannot be brought back', async () => {
+  mockParams = { code: 'pogo' };
+  mockClips.pogo = 'file:///docs/demos/pogo.mov';
+  jest.mocked(deleteDemoClip).mockClear();
+  const r = await render();
+  const alert = jest.spyOn(Alert, 'alert').mockImplementationOnce((_t, _m, buttons?: AlertButton[]) => buttons?.find((b) => b.style === 'cancel')?.onPress?.());
+  await act(async () => pressable(r.root, '删掉自己的视频').props.onPress());
+  expect(alert).toHaveBeenCalledWith('删掉自己拍的示范？', '删掉后换回画的示范图，这段视频不能恢复。', expect.any(Array));
+  expect(deleteDemoClip).not.toHaveBeenCalled();
+  expect(texts(r.root)).toContain('删掉自己的视频');
 });

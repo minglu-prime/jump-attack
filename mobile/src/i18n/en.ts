@@ -336,6 +336,8 @@ export const en: Record<string, string> = {
   '改扣篮线': 'Change the dunk line',
 
   // app/exercise/[code].tsx
+  '删掉自己拍的示范？': 'Delete your own demo clip?',
+  '删掉后换回画的示范图，这段视频不能恢复。': 'Removing it brings back the drawn demo; the clip can’t be restored.',
   '这个动作还没有示范': 'No demo for this exercise yet',
   '起始': 'Start',
   '关键动作': 'Key position',

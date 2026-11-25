@@ -2,7 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DemoFigure } from '@/components/DemoFigure';
 import { Icon } from '@/components/Icon';
@@ -30,9 +30,19 @@ export default function ExerciseDemo() {
     if (!p) setClip(await saveDemoClip(code, asset.uri));
   }
 
+  // The clip is the only copy the app keeps (it is not in backups), so removing it asks first.
   function removeClip() {
-    deleteDemoClip(code);
-    setClip(null);
+    Alert.alert(tr('删掉自己拍的示范？'), tr('删掉后换回画的示范图，这段视频不能恢复。'), [
+      { text: tr('取消'), style: 'cancel' },
+      {
+        text: tr('删除'),
+        style: 'destructive',
+        onPress: () => {
+          deleteDemoClip(code);
+          setClip(null);
+        },
+      },
+    ]);
   }
 
   if (!demo) return <Empty title={tr('这个动作还没有示范')} />;

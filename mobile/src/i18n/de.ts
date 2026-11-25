@@ -336,6 +336,8 @@ export const de: Record<string, string> = {
   '改扣篮线': 'Dunk-Linie ändern',
 
   // app/exercise/[code].tsx
+  '删掉自己拍的示范？': 'Eigenes Demo-Video löschen?',
+  '删掉后换回画的示范图，这段视频不能恢复。': 'Danach erscheint wieder die gezeichnete Vorlage; das Video lässt sich nicht wiederherstellen.',
   '这个动作还没有示范': 'Für diese Übung gibt es noch keine Vorführung',
   '起始': 'Start',
   '关键动作': 'Schlüsselposition',
