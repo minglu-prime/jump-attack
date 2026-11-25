@@ -160,6 +160,27 @@ describe('saving the profile', () => {
     expect(field(r.root, '名字').props.value).toBe(before);
   });
 
+  it('says 已保存 after a save that changed nothing in the end', async () => {
+    const r = await render();
+    const mass = field(r.root, '体重（kg）').props.value;
+    await type(r.root, '体重（kg）', `${mass}1`);
+    await type(r.root, '体重（kg）', mass);
+    await act(async () => button(r).props.onPress());
+    expect(texts(r.root)).toContain('已保存');
+    expect(button(r).props.disabled).toBe(true);
+  });
+
+  it.each(['团队总览', '导入运动员'])('asks before %s can put another athlete in front of changes not saved', async (label) => {
+    const r = await render();
+    await type(r.root, '体重（kg）', '85');
+    const alert = jest.spyOn(Alert, 'alert');
+    alert.mockImplementationOnce((_t, _m, buttons?: AlertButton[]) => buttons?.find((b) => b.style === 'cancel')?.onPress?.());
+    await act(async () => pressable(r.root, label).props.onPress());
+    expect(alert).toHaveBeenCalledWith('档案还没保存', expect.any(String), expect.any(Array));
+    expect(field(r.root, '体重（kg）').props.value).toBe('85');
+    alert.mockRestore();
+  });
+
   it('says why a save failed and lets it be tried again', async () => {
     const repo = jest.requireActual('@/db/repo');
     const spy = jest.spyOn(repo, 'updateAthlete').mockRejectedValueOnce(new Error('disk full'));

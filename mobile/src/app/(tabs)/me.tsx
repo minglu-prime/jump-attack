@@ -207,7 +207,7 @@ function Athletes({ leaveProfile }: { leaveProfile: (go: () => void) => void }) 
         <Button label={tr('添加')} variant="secondary" onPress={() => leaveProfile(add)} disabled={!name.trim()} style={{ paddingHorizontal: 18 }} />
       </View>
       {athletes.length > 1 && (
-        <Pressable accessibilityRole="button" onPress={() => router.push('/team')} style={styles.athlete}>
+        <Pressable accessibilityRole="button" onPress={() => leaveProfile(() => router.push('/team'))} style={styles.athlete}>
           <Icon name="trend" size={18} color={colors.textMuted} />
           <Text style={styles.athleteName}>{tr('团队总览')}</Text>
           <Icon name="chevronRight" size={18} color={colors.textMuted} />
@@ -215,7 +215,7 @@ function Athletes({ leaveProfile }: { leaveProfile: (go: () => void) => void }) 
       )}
       <View style={styles.addRow}>
         {current && <Button label={tr('导出 {name} 的数据', { name: athleteName(current.name) })} variant="ghost" onPress={exportFile} busy={busy === 'export'} style={{ flex: 1 }} />}
-        <Button label={tr('导入运动员')} variant="ghost" onPress={importFile} busy={busy === 'import'} style={{ flex: 1 }} />
+        <Button label={tr('导入运动员')} variant="ghost" onPress={() => leaveProfile(importFile)} busy={busy === 'import'} style={{ flex: 1 }} />
       </View>
       <Text style={styles.footnote}>{tr('一台手机可以记好几个人，测之前先点选是谁。导出的文件只含这个人的数据，可以发给本人导入到他自己的手机；云端同步备份的是这台手机上的所有人。')}</Text>
     </View>
@@ -266,6 +266,7 @@ function ProfileForm({ athlete, saved, onEdit, onSaved }: { athlete: Athlete; sa
       };
       await updateAthlete(db, next);
       await onSaved(next);
+      setEdited(false);
     } catch (e) {
       setSaveError(tr('没保存上：{e}', { e: String(e) }));
     } finally {
