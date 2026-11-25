@@ -108,3 +108,32 @@ it('asks for the session RPE and minutes after training and keeps the load', asy
   await act(async () => {});
   expect(await getWorkout(mockDb, plan!.id, '2026-11-02')).toMatchObject({ sessionRpe: 7, durationMin: 45 });
 });
+
+it('keeps the minutes typed when the page is left with the box still open', async () => {
+  mockParams = { date: '2026-11-02' };
+  const r = await render(<WorkoutScreen />);
+  const minutes = r.root.find((n) => n.type === TextInput && n.props.accessibilityLabel === '训练时长（分钟）');
+  // The number pad has no return key: the athlete types and leaves without the box ever losing focus.
+  await act(async () => minutes.props.onChangeText('30'));
+  await act(async () => r.unmount());
+  await act(async () => {});
+  const plan = await mockDb.getFirstAsync<{ id: number }>('SELECT id FROM plan');
+  expect(await getWorkout(mockDb, plan!.id, '2026-11-02')).toMatchObject({ durationMin: 30 });
+});
+
+it('keeps what was typed in a set when its tick is taken back, so a slip is fixed without typing it all again', async () => {
+  mockParams = { date: '2026-11-04' };
+  const r = await render(<WorkoutScreen />);
+  const firstBox = () => r.root.findAll((n) => n.props.accessibilityRole === 'checkbox' && typeof n.props.onPress === 'function')[0];
+  const row = () => firstBox().parent!.parent!;
+  const reps = () => row().findAll((n) => n.type === TextInput)[0];
+  await act(async () => reps().props.onChangeText('4'));
+  await act(async () => firstBox().props.onPress());
+  await act(async () => {});
+  expect(firstBox().props.accessibilityState.checked).toBe(true);
+
+  await act(async () => firstBox().props.onPress());
+  await act(async () => {});
+  expect(firstBox().props.accessibilityState.checked).toBe(false);
+  expect(reps().props.value).toBe('4');
+});

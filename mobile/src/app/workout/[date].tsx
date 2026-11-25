@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -241,7 +241,7 @@ export default function WorkoutScreen() {
               const prevKg = logged(p.code, n - 1)?.load_kg ?? suggested[p.code]?.kg ?? fromLast(p.code)?.kg ?? null;
               return (
                 <SetRow
-                  key={`${n}-${entry ? 'done' : 'open'}`}
+                  key={n}
                   p={p}
                   setNo={n}
                   entry={entry}
@@ -338,6 +338,17 @@ function SetRow({
   const [kg, setKg] = useState(entry?.load_kg != null ? String(entry.load_kg) : '');
   const [rpe, setRpe] = useState(entry?.rpe != null ? formatRpe(entry.rpe) : '');
   const [v, setV] = useState(entry?.mean_velocity != null ? decimal(entry.mean_velocity, 2) : '');
+  // A ticked set shows what was logged; taking the tick back leaves those numbers in place to fix, not blank boxes.
+  const [shown, setShown] = useState(entry);
+  if (entry !== shown) {
+    setShown(entry);
+    if (entry) {
+      setReps(String(entry.reps));
+      setKg(entry.load_kg != null ? String(entry.load_kg) : '');
+      setRpe(entry.rpe != null ? formatRpe(entry.rpe) : '');
+      setV(entry.mean_velocity != null ? decimal(entry.mean_velocity, 2) : '');
+    }
+  }
   const checked = entry != null;
   const num = (s: string) => (s.trim() === '' ? null : Number(s.replace(',', '.')));
   const below = entry?.mean_velocity != null && minV != null && entry.mean_velocity < minV;
@@ -434,17 +445,39 @@ function SessionLoad({ workout, onSave }: { workout: Workout; onSave: (v: { rpe:
   const [minutes, setMinutes] = useState(String(workout.durationMin ?? workoutMinutes(workout.startedAt, workout.finishedAt) ?? ''));
   const rpe = workout.sessionRpe ?? null;
   const typed = parseNumber(minutes);
+  // The number pad has no return key, so the box may never lose focus before the page is left: minutes typed and not
+  // yet saved are saved on the way out.
+  const unsaved = useRef<{ rpe: number | null; minutes: number | null } | null>(null);
+  const save = useRef(onSave);
+  useEffect(() => {
+    save.current = onSave;
+  }, [onSave]);
+  useEffect(
+    () => () => {
+      if (unsaved.current) save.current(unsaved.current);
+    },
+    [],
+  );
   const load = sessionLoad(workout.durationMin ?? null, rpe);
   return (
     <View style={{ gap: 8 }}>
-      <ScoreScale label={tr('整节课多累（RPE）')} value={rpe} onPick={(r) => onSave({ rpe: r, minutes: typed })} hint={tr('0 很轻松 · 10 用尽全力')} />
+      <ScoreScale label={tr('整节课多累（RPE）')} value={rpe} onPick={(r) => {
+          unsaved.current = null;
+          onSave({ rpe: r, minutes: typed });
+        }} hint={tr('0 很轻松 · 10 用尽全力')} />
       <View style={styles.minutes}>
         <Text style={styles.minutesLabel}>{tr('训练时长')}</Text>
         <TextInput
           value={minutes}
-          onChangeText={setMinutes}
+          onChangeText={(t) => {
+            setMinutes(t);
+            unsaved.current = { rpe, minutes: parseNumber(t) };
+          }}
           // onBlur, not onEndEditing: react-native-web never calls onEndEditing, so the web app never saved the minutes.
-          onBlur={() => onSave({ rpe, minutes: typed })}
+          onBlur={() => {
+            unsaved.current = null;
+            onSave({ rpe, minutes: typed });
+          }}
           keyboardType="number-pad"
           accessibilityLabel={tr('训练时长（分钟）')}
           style={styles.minutesInput}
