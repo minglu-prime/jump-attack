@@ -115,7 +115,7 @@ export default function Result() {
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       {/* Loading gives way to the page by fading, not by a hard cut. */}
       <FadeIn style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           {record && best != null ? (
             <RecordHero
               label={label}

@@ -55,7 +55,7 @@ export default function ForceVelocity() {
 
   if (mass == null || mass <= 0 || hpo == null) {
     return (
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Card style={{ gap: 10 }}>
           <Text style={text.section}>{tr('先在「我的」填三个数')}</Text>
           <Text style={text.muted}>{tr('体重、腿长（踮脚站立，大转子到脚尖）、膝关节 90° 下蹲时大转子离地的高度。后两个只量一次，用来算蹬伸距离。')}</Text>

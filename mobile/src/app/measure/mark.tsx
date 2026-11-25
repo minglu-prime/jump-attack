@@ -158,7 +158,7 @@ export default function Mark() {
 
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <View style={styles.video}>
           <VideoView player={player} nativeControls={false} contentFit="contain" style={StyleSheet.absoluteFill} />
           <View style={styles.frameBadge}>

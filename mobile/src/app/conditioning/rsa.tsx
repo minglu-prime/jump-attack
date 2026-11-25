@@ -45,7 +45,7 @@ export default function RsaTest() {
 
   return (
     <SafeAreaView style={runStyles.screen} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Text style={styles.lead}>{tr('{SPRINTS} 趟 20 m 折返冲刺，每趟间休 {RECOVERY_S} 秒。看两个数：平均时间代表反复冲刺能力，递减百分比代表后程掉速多少。', { SPRINTS, RECOVERY_S })}</Text>
         <Steps title={tr('怎么测')} steps={steps()} />
         <View style={{ gap: 10 }}>
@@ -140,7 +140,7 @@ function Confirm({ initial }: { initial: number[] }) {
 
   return (
     <SafeAreaView style={runStyles.screen} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Text style={styles.label}>{tr('每趟成绩（秒），可以改')}</Text>
         <View style={styles.inputs}>
           {entries.map((e, i) => (

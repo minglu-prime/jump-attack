@@ -44,7 +44,7 @@ export default function CooperTest() {
 
   return (
     <SafeAreaView style={runStyles.screen} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Text style={styles.lead}>{tr('12 分钟内跑尽量远，按距离估算 VO2max。要匀速，开头别冲太快。')}</Text>
         <Steps title={tr('怎么测')} steps={STEPS} />
         <View style={{ gap: 10 }}>
@@ -133,7 +133,7 @@ function Confirm({ laps, lapM }: { laps: number; lapM: number }) {
 
   return (
     <SafeAreaView style={runStyles.screen} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         {lapM ? (
           <>
             <Text style={styles.label}>{tr('记了 {laps} 圈 × {lapM} m = {counted} m', { laps, lapM, counted })}</Text>
