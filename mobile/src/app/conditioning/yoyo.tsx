@@ -32,7 +32,6 @@ function buildCues(): Cue[] {
   return cues;
 }
 
-const CUES = buildCues();
 
 export default function YoyoTest() {
   const [phase, setPhase] = useState<'intro' | 'running' | 'confirm'>('intro');
@@ -69,7 +68,9 @@ export default function YoyoTest() {
 function Running({ startAt, onStop }: { startAt: number; onStop: (completed: number) => void }) {
   useKeepAwake();
   const player = useCues();
-  const t = useTimeline(startAt, CUES, player);
+  // Built here, not at module load: tr() must see the language the app is in now (i18n rule).
+  const [cues] = useState(buildCues);
+  const t = useTimeline(startAt, cues, player);
   const state = yoyoStateAt(Math.max(0, t));
   const done = state.phase === 'done';
 
