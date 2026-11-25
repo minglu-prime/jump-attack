@@ -479,3 +479,42 @@ describe('Apple Health import', () => {
     expect(mockClipboard).toContain('HRV: 58');
   });
 });
+
+describe('the recovery form', () => {
+  const save = (r: ReactTestRenderer) =>
+    r.root.find((n) => typeof n.props.onPress === 'function' && n.findAllByType(Text).some((t) => ['保存', '已保存'].includes([t.props.children].flat().join(''))));
+
+  it('has nothing to save until a value changes, then says it was saved', async () => {
+    const r = await render(<Recovery />);
+    expect(save(r).props.disabled).toBe(true);
+    await type(r.root, '呼吸频率（次/分）', '14');
+    expect(save(r).props.disabled).toBe(false);
+    await act(async () => save(r).props.onPress());
+    await act(async () => {});
+    expect(texts(r.root)).toContain('已保存');
+    expect(save(r).props.disabled).toBe(true);
+  });
+
+  it('asks before a save that empties the whole day, and keeps it when the answer is no', async () => {
+    const before = (await listSessionResults(mockDb, 1, 'rec_hrv')).at(-1)?.best;
+    expect(before).toBeDefined();
+    const r = await render(<Recovery />);
+    for (const label of ['HRV (SDNN)（ms）', '静息心率（bpm）', '睡眠（h）', '呼吸频率（次/分）']) await type(r.root, label, '');
+    const alert = jest.spyOn(Alert, 'alert').mockImplementationOnce((_t, _m, buttons) => buttons?.find((b) => b.style === 'cancel')?.onPress?.());
+    await act(async () => save(r).props.onPress());
+    await act(async () => {});
+    expect(alert).toHaveBeenCalledWith(expect.stringContaining('清空'), expect.any(String), expect.any(Array));
+    expect((await listSessionResults(mockDb, 1, 'rec_hrv')).at(-1)?.best).toBe(before);
+    alert.mockRestore();
+  });
+
+  it('asks before switching day with values not saved', async () => {
+    const r = await render(<Recovery />);
+    await type(r.root, '睡眠（h）', '9');
+    const alert = jest.spyOn(Alert, 'alert').mockImplementationOnce((_t, _m, buttons) => buttons?.find((b) => b.style === 'cancel')?.onPress?.());
+    await press(r.root, '昨天');
+    expect(alert).toHaveBeenCalledWith('还没保存', expect.any(String), expect.any(Array));
+    expect(input(r.root, '睡眠（h）').props.value).toBe('9');
+    alert.mockRestore();
+  });
+});

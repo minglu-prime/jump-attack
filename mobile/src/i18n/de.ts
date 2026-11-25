@@ -1938,4 +1938,11 @@ export const de: Record<string, string> = {
   '换人后，刚才改的档案不会保存。': 'Beim Wechseln gehen die eben gemachten Profiländerungen verloren.',
   '继续编辑': 'Weiter bearbeiten',
   '不保存，换人': 'Ohne Speichern wechseln',
+  '清空 {date} 的恢复记录？': 'Erholungseintrag vom {date} löschen?',
+  '这一天记下的数都会删掉。': 'Alle Werte dieses Tages werden gelöscht.',
+  '清空': 'Löschen',
+  '还没保存': 'Noch nicht gespeichert',
+  '换到另一天，刚才填的数不会保存。': 'Beim Tageswechsel gehen die eben eingegebenen Werte verloren.',
+  '继续填': 'Weiter eingeben',
+  '不保存': 'Nicht speichern',
 };
