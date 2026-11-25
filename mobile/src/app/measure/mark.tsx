@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AutoMarker } from '@/components/AutoMarker';
 import { Button, Chip, Empty } from '@/components/ui';
+import { VIDEO_FILL } from '@/components/videoFill';
 import { addTrial, ensureSession } from '@/db/repo';
 import { recalibrateTouches, touchOffsetFor } from '@/db/touch';
 import { parseNumber } from '@/domain/entry';
@@ -160,7 +161,7 @@ export default function Mark() {
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <View style={styles.video}>
-          <VideoView player={player} nativeControls={false} contentFit="contain" style={StyleSheet.absoluteFill} />
+          <VideoView player={player} nativeControls={false} contentFit="contain" style={VIDEO_FILL} />
           <View style={styles.frameBadge}>
             <Text style={styles.frameText}>#{frame}</Text>
             <Text style={styles.frameTime}>{Math.round((frame / fps) * 1000)} ms</Text>

@@ -13,6 +13,7 @@ import { OutcomeButtons } from '@/components/OutcomeButtons';
 import { PoseReader, type ClipInfo, type PoseReaderHandle } from '@/components/PoseReader';
 import { PulseProgress } from '@/components/PulseProgress';
 import { Button, Chip, Digits } from '@/components/ui';
+import { VIDEO_FILL } from '@/components/videoFill';
 import { addDunkAttempt } from '@/db/dunkAttempts';
 import { addTechniqueTake, reachByDay, type TechniqueSource } from '@/db/technique';
 import { toISODate } from '@/domain/dates';
@@ -268,7 +269,7 @@ export default function TechniqueAnalyse() {
               zoom && { transform: [{ translateX: -ZOOM * (zoom.x - view.w / 2) }, { translateY: -ZOOM * (zoom.y - view.h / 2) }, { scale: ZOOM }] },
             ]}
           >
-            <VideoView player={player} nativeControls={false} contentFit="contain" style={StyleSheet.absoluteFill} />
+            <VideoView player={player} nativeControls={false} contentFit="contain" style={VIDEO_FILL} />
           </View>
           {/* The page that reads poses: hidden until it runs, then it shows each frame it reads with the athlete's skeleton. */}
           <View style={[StyleSheet.absoluteFill, { opacity: running ? 1 : 0.01 }]} pointerEvents="none">
