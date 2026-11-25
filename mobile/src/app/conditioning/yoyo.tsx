@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { countIn, useCues, useTimeline, type Cue } from '@/components/conditioning/cues';
 import { confirmStop, RunningScreen, runStyles, Steps, Stepper, useSaveResult } from '@/components/conditioning/ui';
-import { Button } from '@/components/ui';
+import { Button, Digits } from '@/components/ui';
 import { clock, YOYO_IR1, yoyoCompletedAt, yoyoDistance, yoyoLabel, yoyoStateAt, yoyoVo2max } from '@/domain/conditioning';
 import { decimal, localized, tr } from '@/i18n';
 import { colors, fonts } from '@/theme';
@@ -88,11 +88,9 @@ function Running({ startAt, onStop }: { startAt: number; onStop: (completed: num
       <SafeAreaView style={runStyles.screen}>
         <View style={[runStyles.body, { justifyContent: 'center' }]}>
           <Text style={runStyles.label}>{tr('{p} · 第 {n} 趟 · {speedKmh} km/h', { p: state.phase === 'rest' || t < 0 ? tr('下一趟') : tr('当前'), n: shuttle.n, speedKmh: shuttle.speedKmh })}</Text>
-          <Text style={[runStyles.huge, { color: phaseColor }]}>
-            {shuttle.level}.{shuttle.inLevel}
-          </Text>
+          <Digits style={[runStyles.huge, { color: phaseColor }]}>{`${shuttle.level}.${shuttle.inLevel}`}</Digits>
           <Text style={[runStyles.phase, { color: phaseColor }]}>{phaseText}</Text>
-          <Text style={styles.countdown}>{decimal(toBeep, 1)}</Text>
+          <Digits style={styles.countdown}>{decimal(toBeep, 1)}</Digits>
           <View style={runStyles.stats}>
             <View style={runStyles.stat}>
               <Text style={runStyles.statValue}>{yoyoDistance(yoyoCompletedAt(t))}</Text>

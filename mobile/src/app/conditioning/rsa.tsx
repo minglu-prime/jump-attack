@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { countIn, useCues, useTimeline, type Cue } from '@/components/conditioning/cues';
 import { confirmStop, RunningScreen, runStyles, Steps, useSaveResult } from '@/components/conditioning/ui';
-import { Button, Chip } from '@/components/ui';
+import { Button, Chip, Digits } from '@/components/ui';
 import { RSA_PROTOCOL, rsaSummary } from '@/domain/conditioning';
 import { decimal, tr } from '@/i18n';
 import { colors, fonts, radius } from '@/theme';
@@ -105,7 +105,7 @@ function Running({ onDone }: { onDone: (times: number[]) => void }) {
       <SafeAreaView style={runStyles.screen}>
         <View style={runStyles.body}>
           <Text style={runStyles.label}>{tr('第 {sprintNo} / {SPRINTS} 趟 · {p}', { sprintNo, SPRINTS, p: sprinting ? tr('冲刺中') : times.length ? tr('间歇') : tr('准备') })}</Text>
-          <Text style={[runStyles.huge, { color: sprinting ? colors.accent : colors.good }]}>{sprinting ? decimal(t, 2) : Math.ceil(-t)}</Text>
+          <Digits style={[runStyles.huge, { color: sprinting ? colors.accent : colors.good }]}>{sprinting ? decimal(t, 2) : String(Math.ceil(-t))}</Digits>
           <View style={styles.splits}>
             {Array.from({ length: SPRINTS }, (_, i) => (
               <View key={i} style={styles.split}>

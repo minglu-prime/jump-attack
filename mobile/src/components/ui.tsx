@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View, type PressableProps, type ViewStyle } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View, type PressableProps, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 import { FadeIn, PressScale, Swap } from '@/components/motion';
 import { tr } from '@/i18n';
-import { colors, radius } from '@/theme';
+import { colors, fonts, radius } from '@/theme';
 
 type ButtonProps = Omit<PressableProps, 'style' | 'children'> & {
   label: string;
@@ -52,6 +52,27 @@ export function Empty({ title, hint }: { title: string; hint?: string }) {
   );
 }
 
+// The widest digit of each number face, as a share of the font size (Big Shoulders: 961 and 896 of 2000 units).
+const DIGIT_EM: Record<string, number> = { [fonts.numericBold]: 0.49, [fonts.numeric]: 0.45 };
+
+/**
+ * A number that changes while it is watched (a running clock). The number face has no tabular figures, so each digit
+ * gets a slot as wide as the widest one: the line holds still instead of swaying as "1"s come and go.
+ */
+export function Digits({ children, style }: { children: string; style: StyleProp<TextStyle> }) {
+  const flat = StyleSheet.flatten(style);
+  const slot = (flat.fontSize ?? 15) * (DIGIT_EM[flat.fontFamily ?? ''] ?? 0.6);
+  return (
+    <View accessible accessibilityLabel={children} style={styles.digits}>
+      {[...children].map((c, i) => (
+        <Text key={i} style={[style, /\d/.test(c) && { width: slot, textAlign: 'center' }]}>
+          {c}
+        </Text>
+      ))}
+    </View>
+  );
+}
+
 /** Shown while a screen's data is read, so loading never reads as a blank page or as "no records". */
 export function Loading() {
   return (
@@ -75,6 +96,7 @@ export function LoadFailed({ title, error, onRetry }: { title: string; error: st
 }
 
 const styles = StyleSheet.create({
+  digits: { flexDirection: 'row', justifyContent: 'center' },
   button: { height: 52, borderRadius: radius.button, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
   primary: { backgroundColor: colors.accent },
   secondary: { borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },

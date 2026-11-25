@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { countIn, useCues, useTimeline, type Cue } from '@/components/conditioning/cues';
 import { confirmStop, RunningScreen, runStyles, Steps, useSaveResult } from '@/components/conditioning/ui';
-import { Button, Chip } from '@/components/ui';
+import { Button, Chip, Digits } from '@/components/ui';
 import { clock, COOPER_SECONDS, cooperVo2max } from '@/domain/conditioning';
 import { decimal, localized, tr } from '@/i18n';
 import { colors, fonts, radius } from '@/theme';
@@ -89,7 +89,7 @@ function Running({ startAt, lapM, laps, onLap, onStop }: { startAt: number; lapM
       <SafeAreaView style={runStyles.screen}>
         <View style={[runStyles.body, { justifyContent: 'center' }]}>
           <Text style={runStyles.label}>{t < 0 ? tr('准备起跑') : over ? tr('时间到') : tr('剩余时间')}</Text>
-          <Text style={[runStyles.huge, { color: t < 0 ? colors.good : colors.accent }]}>{t < 0 ? Math.ceil(-t) : clock(COOPER_SECONDS - t)}</Text>
+          <Digits style={[runStyles.huge, { color: t < 0 ? colors.good : colors.accent }]}>{t < 0 ? String(Math.ceil(-t)) : clock(COOPER_SECONDS - t)}</Digits>
           {lapM > 0 && (
             <View style={runStyles.stats}>
               <View style={runStyles.stat}>
