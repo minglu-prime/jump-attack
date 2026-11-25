@@ -3,7 +3,7 @@ import { ActivityIndicator, StyleSheet, Text, View, type PressableProps, type St
 
 import { FadeIn, PressScale, Swap } from '@/components/motion';
 import { tr } from '@/i18n';
-import { colors, fonts, radius } from '@/theme';
+import { colors, fonts, motion, radius } from '@/theme';
 
 type ButtonProps = Omit<PressableProps, 'style' | 'children'> & {
   label: string;
@@ -77,7 +77,9 @@ export function Digits({ children, style }: { children: string; style: StyleProp
 export function Loading() {
   return (
     <View style={styles.empty} accessible accessibilityRole="progressbar" accessibilityLabel={tr('正在加载')}>
-      <ActivityIndicator color={colors.accent} />
+      <FadeIn delay={motion.loadingDelay}>
+        <ActivityIndicator color={colors.accent} />
+      </FadeIn>
     </View>
   );
 }

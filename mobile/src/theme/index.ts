@@ -56,6 +56,8 @@ export const motion = {
   press: { stiffness: 420, damping: 34, mass: 1 },
   /** A key number rolling to its new value. */
   count: 600,
+  /** A spinner waits this long before fading in: most local reads are done by then, and it never flashes. */
+  loadingDelay: 120,
   /** cubic-bezier(0.2, 0, 0, 1): an Apple-like ease-out, quick to start with a long gentle settle. */
   ease: [0.2, 0, 0, 1] as const,
 };
