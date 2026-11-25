@@ -195,3 +195,8 @@ it('lets the person pick a side of a conflict with plain buttons, which also wor
   await press(r.root, '用手机上的');
   expect(mockSync.syncNow).toHaveBeenLastCalledWith('phone');
 });
+
+it('never shows code paths or keys to the person using the app', async () => {
+  const r = await render();
+  expect(texts(r.root)).not.toMatch(/config\.ts|Supabase|key/);
+});

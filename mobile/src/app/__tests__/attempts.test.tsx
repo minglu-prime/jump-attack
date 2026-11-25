@@ -2,6 +2,7 @@
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 import { Alert, Text, TextInput } from 'react-native';
 
+import { KeyboardDoneBar } from '@/components/KeyboardDoneBar';
 import { addDunkAttempt, listDunkAttempts } from '@/db/dunkAttempts';
 import { migrate } from '@/db/migrations';
 import { createAthlete, getAthlete, type Athlete } from '@/db/repo';
@@ -252,4 +253,9 @@ it('does not offer to undo another athlete’s attempt after switching athlete',
   expect(texts(r.root)).not.toContain('记了一次');
   expect(r.root.findAll((n) => n.props.accessibilityLabel === '撤销刚才这次')).toHaveLength(0);
   mockAthlete.current = me;
+});
+
+it('leaves the keyboard bar to the app root instead of drawing a second one', async () => {
+  const r = await render(<Attempts />);
+  expect(r.root.findAllByType(KeyboardDoneBar)).toHaveLength(0);
 });

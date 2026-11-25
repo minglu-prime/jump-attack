@@ -216,7 +216,7 @@ export const de: Record<string, string> = {
   '录像文件不在备份里，只备份测试结果、训练记录、恢复数据和档案。': 'Videos sind nicht in der Sicherung, nur Testergebnisse, Trainingsprotokolle, Erholungsdaten und Profile.',
   '导出备份文件': 'Sicherungsdatei exportieren',
   '从备份文件恢复': 'Aus Sicherungsdatei wiederherstellen',
-  '云端还没接好：Supabase 项目的地址和 key 填进 src/sync/config.ts 后，这里就能登录。现在可以先用下面的备份文件。': 'Die Cloud ist noch nicht eingerichtet: Sobald URL und Key des Supabase-Projekts in src/sync/config.ts stehen, kannst du dich hier anmelden. Bis dahin die Sicherungsdatei unten verwenden.',
+  '云端还没接好：现在先用下面的备份文件保存数据，换手机时用它恢复。': 'Die Cloud ist noch nicht eingerichtet: Sichere deine Daten vorerst mit der Sicherungsdatei unten und stelle sie damit auf einem neuen Handy wieder her.',
   '已登录 {email}': 'Angemeldet als {email}',
   '打开 App 和切到后台时会自动同步。': 'Synchronisiert automatisch beim Öffnen der App und wenn sie in den Hintergrund geht.',
   '手机和云端的数据不一样，选一份保留': 'Handy und Cloud haben unterschiedliche Daten; wähle aus, welche bleiben',

@@ -92,7 +92,7 @@ function CloudCard() {
   if (!sync.configured) {
     return (
       <Card style={{ gap: 8 }}>
-        <Text style={text.body}>{tr('云端还没接好：Supabase 项目的地址和 key 填进 src/sync/config.ts 后，这里就能登录。现在可以先用下面的备份文件。')}</Text>
+        <Text style={text.body}>{tr('云端还没接好：现在先用下面的备份文件保存数据，换手机时用它恢复。')}</Text>
       </Card>
     );
   }

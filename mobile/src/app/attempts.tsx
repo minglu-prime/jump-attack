@@ -6,7 +6,6 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
-import { KeyboardDoneBar } from '@/components/KeyboardDoneBar';
 import { FadeIn, nextLayout, PressScale } from '@/components/motion';
 import { OUTCOME_COLOR, OutcomeButtons } from '@/components/OutcomeButtons';
 import { Button, Card } from '@/components/ui';
@@ -266,7 +265,6 @@ export default function Attempts() {
           </Card>
         )}
       </ScrollView>
-      <KeyboardDoneBar />
     </SafeAreaView>
   );
 }

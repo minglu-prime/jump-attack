@@ -202,3 +202,16 @@ describe('several clips picked at once', () => {
     expect(mockRouter.replace).toHaveBeenCalledWith(expect.objectContaining({ params: expect.objectContaining({ uri: 'file:///next.mov' }) }));
   });
 });
+
+it('shows the frame number in white on the dark badge over the video', async () => {
+  mockParams = { metric: 'cmj', session: 'cmj-badge', uri: 'file:///clip.mov', fps: '0' };
+  const r = await render();
+  const frame = r.root.findAllByType(Text).find((t) => [t.props.children].flat().join('') === '#0')!;
+  const time = r.root.findAllByType(Text).find((t) => [t.props.children].flat().join('') === '0 ms')!;
+  const color = (t: ReactTestInstance) => [t.props.style].flat().reduce((a, s) => ({ ...a, ...s }), {}).color;
+  expect(color(frame)).toBe('#FFFFFF');
+  expect(color(time)).toBe('rgba(255,255,255,0.7)');
+  // The phase tag uses the dark phase colours, so it sits on white, where each of them is readable.
+  const tag = r.root.findAll((n) => [n.props.style].flat().some((s) => s?.borderWidth === 1 && s?.position === 'absolute'))[0];
+  expect([tag.props.style].flat().reduce((a, s) => ({ ...a, ...s }), {}).backgroundColor).toBe('#FFFFFF');
+});
