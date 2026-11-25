@@ -222,3 +222,46 @@ it('asks nothing about the frame rate of a clip filmed in the app', async () => 
   expect(texts(r.root)).not.toContain('拍摄帧率');
   expect(texts(r.root)).not.toContain('慢动作');
 });
+
+it('marks two med-ball slams in one clip, with the ball’s mass and size saved with each', async () => {
+  mockParams = { metric: 'med_ball_slam', session: 'slam-1', uri: 'file:///slams.mov', fps: '0', stature: '175', ball: '30', load: '6' };
+  const r = await render();
+  expect(texts(r.root)).toContain('标记球过头顶和落地两帧后显示速度');
+
+  // 1.75 m − 0.15 m = 1.6 m in 40 frames at 240 fps = 9.6 m/s.
+  await step(r.root, 100);
+  await press(byLabel(r.root, '把当前帧标为过头顶帧'));
+  await step(r.root, 40);
+  await press(byLabel(r.root, '把当前帧标为落地帧'));
+  expect(texts(r.root)).toContain('167');
+  expect(texts(r.root)).toContain('9.6');
+  await press(pressable(r.root, '保存，接着标这段视频的下一次'));
+  expect(texts(r.root)).toContain('这段视频已存 1 次，可以接着往后标下一次');
+
+  // Second slam: 48 frames = 8.0 m/s.
+  await step(r.root, 600);
+  await press(byLabel(r.root, '把当前帧标为过头顶帧'));
+  await step(r.root, 48);
+  await press(byLabel(r.root, '把当前帧标为落地帧'));
+  expect(texts(r.root)).toContain('8.0');
+  await press(pressable(r.root, '保存这一次'));
+
+  const trials = await listTrials(mockDb, 'slam-1');
+  expect(trials.map((t) => [t.takeoff_frame, t.landing_frame, t.value, t.load_kg])).toEqual([
+    [100, 140, 9.6, 6],
+    [740, 788, 8, 6],
+  ]);
+  expect(trials[0].detail).toEqual({ source: 'video', stature_cm: 175, ball_cm: 30, drop_m: 1.6 });
+  expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/measure/result', params: { metric: 'med_ball_slam', session: 'slam-1' } });
+});
+
+it('rejects slam marks too close together for any throw', async () => {
+  mockParams = { metric: 'med_ball_slam', session: 'slam-2', uri: 'file:///slams.mov', fps: '0', stature: '175', ball: '30' };
+  const r = await render();
+  await step(r.root, 100);
+  await press(byLabel(r.root, '把当前帧标为过头顶帧'));
+  await step(r.root, 5);
+  await press(byLabel(r.root, '把当前帧标为落地帧'));
+  // At 240 fps 5 frames is 21 ms: no throw is that fast.
+  expect(texts(r.root)).toContain('速度超过 25 m/s');
+});
