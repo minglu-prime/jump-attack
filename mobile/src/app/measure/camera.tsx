@@ -113,7 +113,9 @@ export default function TestCamera() {
   function use(take: Recorded) {
     camera.current?.stopCamera();
     const params = Object.fromEntries(Object.entries(pass).filter((e): e is [string, string] => e[1] != null));
-    router.replace({ pathname: next, params: { ...params, uri: take.uri, fps: String(Math.round(info?.fps ?? 30)) } });
+    // A jump filmed here is never slow motion: marking and analysis need not ask for its frame rate.
+    const jump = next === '/measure/analyse' || next === '/measure/mark';
+    router.replace({ pathname: next, params: { ...params, uri: take.uri, fps: String(Math.round(info?.fps ?? 30)), ...(jump ? { source: 'camera' } : {}) } });
   }
 
   const live = rec.name === 'live';

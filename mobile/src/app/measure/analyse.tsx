@@ -60,7 +60,7 @@ type Phase = { name: 'setup' } | { name: 'running'; done: number; total: number;
  * frame can be nudged a frame at a time before saving.
  */
 export default function Analyse() {
-  const params = useLocalSearchParams<{ metric: string; session: string; uri: string; fps: string; from?: string; box?: string; asset?: string; queue?: string }>();
+  const params = useLocalSearchParams<{ metric: string; session: string; uri: string; fps: string; from?: string; box?: string; asset?: string; queue?: string; source?: string }>();
   const db = useSQLiteContext();
   const { current } = useAthlete();
   const def = getMetric(params.metric);
@@ -117,10 +117,12 @@ export default function Analyse() {
     if (def?.plusReach && athleteId != null) touchOffsetFor(db, athleteId).then(setOffset);
   }, [db, athleteId, def]);
 
-  const { file: fileFps, capture: fps } = markingRates({ detected: detectedFps, chosen: captureOverride, reported: Number(params.fps) || 0 });
+  // Filmed in the app: real time, so the frame rate is never asked for (an import may be a slow-motion export).
+  const camera = params.source === 'camera';
+  const { file: fileFps, capture: fps } = markingRates({ detected: detectedFps, chosen: camera ? null : captureOverride, reported: Number(params.fps) || 0 });
   const total = frameCount(duration || clip?.duration || 0, fileFps);
   const span = range ?? { from: 0, to: Math.max(0, total - 1) };
-  const looksSlowMo = detectedFps != null && detectedFps < 100;
+  const looksSlowMo = !camera && detectedFps != null && detectedFps < 100;
   const fpsChoices = detectedFps == null ? FPS_CHOICES : [fileFps, ...FPS_CHOICES.filter((f) => f > fileFps)];
 
   const analysis = useMemo(
@@ -311,7 +313,7 @@ export default function Analyse() {
 
   function markByHand() {
     // In this screen's place, so the marking screen's way back (to the logger, or on to the result) is the same as from the import.
-    router.replace({ pathname: '/measure/mark', params: { metric: params.metric, session: params.session, uri: params.uri, fps: params.fps, ...(params.from ? { from: params.from } : {}), ...(params.box ? { box: params.box } : {}), ...(params.asset ? { asset: params.asset } : {}), ...(params.queue ? { queue: params.queue } : {}) } });
+    router.replace({ pathname: '/measure/mark', params: { metric: params.metric, session: params.session, uri: params.uri, fps: params.fps, ...(params.from ? { from: params.from } : {}), ...(params.box ? { box: params.box } : {}), ...(params.asset ? { asset: params.asset } : {}), ...(params.queue ? { queue: params.queue } : {}), ...(camera ? { source: 'camera' } : {}) } });
   }
 
   function skip() {
@@ -396,14 +398,16 @@ export default function Analyse() {
                 ? tr('马上自动开始分析…')
                 : tr('{p}再拖两头的黄色把手，截到第一次起跳前、最后一次落地后，松手后自动开始分析。', { p: target ? tr('已点选运动员。') : tr('点一下画面里的运动员（旁边有人在动时一定要点）。') })}
             </Text>
-            <View style={styles.fpsRow}>
-              <Text style={styles.muted}>{tr('拍摄帧率{p}', { p: detectedFps ? tr('（视频 {detectedFps} fps）', { detectedFps }) : '' })}</Text>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                {fpsChoices.map((f) => (
-                  <Chip key={f} label={String(f)} selected={f === fps} onPress={() => setCaptureOverride(f)} />
-                ))}
+            {!camera && (
+              <View style={styles.fpsRow}>
+                <Text style={styles.muted}>{tr('拍摄帧率{p}', { p: detectedFps ? tr('（视频 {detectedFps} fps）', { detectedFps }) : '' })}</Text>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  {fpsChoices.map((f) => (
+                    <Chip key={f} label={String(f)} selected={f === fps} onPress={() => setCaptureOverride(f)} />
+                  ))}
+                </View>
               </View>
-            </View>
+            )}
             {looksSlowMo && fps <= fileFps && <Text style={styles.warn}>{tr('这个视频是 {detectedFps} fps。如果是用 iPhone「慢动作」拍的，拍摄帧率选 240（120 fps 慢动作选 120）。', { detectedFps })}</Text>}
           </FadeIn>
         )}

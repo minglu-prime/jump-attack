@@ -215,3 +215,10 @@ it('shows the frame number in white on the dark badge over the video', async () 
   const tag = r.root.findAll((n) => [n.props.style].flat().some((s) => s?.borderWidth === 1 && s?.position === 'absolute'))[0];
   expect([tag.props.style].flat().reduce((a, s) => ({ ...a, ...s }), {}).backgroundColor).toBe('#FFFFFF');
 });
+
+it('asks nothing about the frame rate of a clip filmed in the app', async () => {
+  mockParams = { metric: 'cmj', session: 'cmj-cam', uri: 'file:///take.mp4', fps: '60', source: 'camera' };
+  const r = await render();
+  expect(texts(r.root)).not.toContain('拍摄帧率');
+  expect(texts(r.root)).not.toContain('慢动作');
+});

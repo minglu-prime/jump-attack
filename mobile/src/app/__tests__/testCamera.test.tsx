@@ -133,7 +133,7 @@ it('films a jump in the app and hands the take on to the automatic analysis, wit
   expect(mockWeb.inject).toHaveBeenLastCalledWith('window.stopCamera(); true;');
   expect(mockRouter.replace).toHaveBeenCalledWith({
     pathname: '/measure/analyse',
-    params: { metric: 'cmj', session: 'cmj-1', from: 'testday', uri: expect.stringMatching(/test-takes\/take-\d+\.mp4$/), fps: '60' },
+    params: { metric: 'cmj', session: 'cmj-1', from: 'testday', uri: expect.stringMatching(/test-takes\/take-\d+\.mp4$/), fps: '60', source: 'camera' },
   });
 
   await act(async () => r.unmount());

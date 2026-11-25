@@ -346,3 +346,15 @@ describe('several clips picked at once', () => {
     expect(mockRouter.replace).toHaveBeenLastCalledWith({ pathname: '/measure/mark', params: expect.objectContaining({ uri: 'file:///picked/IMG_0003.MOV', queue }) });
   });
 });
+
+it('asks nothing about the frame rate of a clip filmed in the app, which is never slow motion', async () => {
+  const scene = defaultScene('cmj', { fps: 60 });
+  await open(scene, { metric: 'cmj', session: 'cam-1', fps: '60' });
+  // An imported clip may be a slow-motion export, so the rate is asked for.
+  expect(texts(r.root)).toContain('拍摄帧率');
+  await act(async () => r.unmount());
+
+  await open(scene, { metric: 'cmj', session: 'cam-2', fps: '60', source: 'camera' });
+  expect(texts(r.root)).not.toContain('拍摄帧率');
+  expect(texts(r.root)).not.toContain('慢动作');
+});
