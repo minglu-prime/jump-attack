@@ -1,12 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { useMemo, useState } from 'react';
+import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
-import { useReduceMotion } from '@/components/motion';
 import { tr } from '@/i18n';
 import { colors, fonts } from '@/theme';
-
-const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 const HEIGHT = 64;
 /** One heartbeat of the trace, in px. */
@@ -47,28 +44,16 @@ function trace(width: number): { d: string; length: number; at: (len: number) =>
 }
 
 /**
- * Analysis progress as an electronic pulse: a heartbeat trace that lights up from the left as frames are read, with a
- * spark running along the lit part. `progress` is 0–1; `label` says what is happening now.
+ * Analysis progress as an electronic pulse: a heartbeat trace that lights up from the left as frames are read, its head
+ * marked by a dot. `progress` is 0–1; `label` says what is happening now. Nothing else moves: the analysis shares the
+ * JS thread, and a running spark only decorated it.
  */
 export function PulseProgress({ progress, label }: { progress: number; label: string }) {
   const [width, setWidth] = useState(0);
-  const reduce = useReduceMotion();
-  const [run] = useState(() => new Animated.Value(0));
   const { d, length, at } = useMemo(() => trace(width), [width]);
   const p = Math.max(0, Math.min(1, progress));
   const lit = length * p;
   const [hx, hy] = at(lit);
-
-  useEffect(() => {
-    if (reduce !== false) return;
-    const loop = Animated.loop(Animated.timing(run, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.quad), useNativeDriver: false }));
-    loop.start();
-    return () => loop.stop();
-  }, [run, reduce]);
-
-  // The spark: a short bright dash moving from the start of the trace to the head.
-  const spark = 26;
-  const offset = run.interpolate({ inputRange: [0, 1], outputRange: [spark, spark - Math.max(spark, lit)] });
 
   return (
     <View style={styles.panel} onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width - 32)}>
@@ -87,9 +72,6 @@ export function PulseProgress({ progress, label }: { progress: number; label: st
           <Path d={d} stroke={DIM} strokeWidth={2} fill="none" strokeLinejoin="round" />
           <Path d={d} stroke={colors.rim} strokeOpacity={0.35} strokeWidth={7} fill="none" strokeLinejoin="round" strokeDasharray={[lit, length]} />
           <Path d={d} stroke={colors.rim} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeDasharray={[lit, length]} />
-          {reduce === false && lit > spark && (
-            <AnimatedPath d={d} stroke="#FFFFFF" strokeWidth={3} fill="none" strokeLinecap="round" strokeDasharray={[spark, length + spark]} strokeDashoffset={offset} />
-          )}
           <Circle cx={hx} cy={hy} r={4} fill="#FFFFFF" />
         </Svg>
       )}
