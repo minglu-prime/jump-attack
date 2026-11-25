@@ -4,6 +4,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { motion } from '@/theme';
 
 import { CountUp, ease, FadeIn, PressScale, Rise, Swap } from '../motion';
+import { Button } from '../ui';
 
 const mockSelection = jest.fn(() => Promise.resolve());
 jest.mock('expo-haptics', () => ({ selectionAsync: () => mockSelection() }));
@@ -173,6 +174,18 @@ describe('one motion language', () => {
     await act(async () => listener!({ value: 271.46 }));
     expect(r.root.findByType(Text).props.children).toBe('271 cm');
   });
+});
+
+it('fades a button’s new label in place (保存 → 已保存), as it does the spinner', async () => {
+  jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(false);
+  const timing = jest.spyOn(Animated, 'timing');
+  let r!: ReactTestRenderer;
+  await act(async () => {
+    r = track(<Button label="保存" onPress={() => {}} />);
+  });
+  timing.mockClear();
+  await act(async () => r.update(<Button label="已保存" onPress={() => {}} />));
+  expect(timing).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ toValue: 1, duration: motion.swap }));
 });
 
 describe('CountUp', () => {

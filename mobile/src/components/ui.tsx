@@ -20,7 +20,7 @@ export function Button({ label, variant = 'primary', busy, disabled, style, ...r
       style={[styles.button, isPrimary ? styles.primary : variant === 'secondary' ? styles.secondary : styles.ghost, (disabled || busy) && styles.disabled, style]}
       {...rest}
     >
-      <Swap id={!!busy}>
+      <Swap id={busy ? true : label}>
         {busy ? (
           <ActivityIndicator color={isPrimary ? colors.onAccent : colors.text} />
         ) : (
