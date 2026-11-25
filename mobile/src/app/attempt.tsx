@@ -1,11 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useVideoPlayer, VideoView, type VideoPlayer } from 'expo-video';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { OUTCOME_COLOR } from '@/components/OutcomeButtons';
-import { Button, Chip } from '@/components/ui';
+import { Button, Chip, Empty, LoadFailed, Loading } from '@/components/ui';
 import { deleteDunkAttempt, listDunkAttempts } from '@/db/dunkAttempts';
 import { listTechniqueTakes, techniqueVideoUris, type TechniqueTake } from '@/db/technique';
 import { shortDate, toISODate } from '@/domain/dates';
@@ -33,12 +33,14 @@ export default function AttemptView() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const db = useSQLiteContext();
   const { current } = useAthlete();
-  const [attempt, setAttempt] = useState<DunkAttempt | null>(null);
+  // undefined while it is read; null when there is no such attempt (deleted meanwhile).
+  const [attempt, setAttempt] = useState<DunkAttempt | null | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
   const [take, setTake] = useState<TechniqueTake | null>(null);
   const [slow, setSlow] = useState(false);
 
   const athleteId = current?.id;
-  useEffect(() => {
+  const load = useCallback(() => {
     if (athleteId == null) return;
     let live = true;
     (async () => {
@@ -47,11 +49,13 @@ export default function AttemptView() {
       if (!live) return;
       setAttempt(a);
       setTake(t);
-    })();
+      setError(null);
+    })().catch((e) => live && setError(String(e)));
     return () => {
       live = false;
     };
   }, [db, athleteId, id]);
+  useEffect(load, [load]);
 
   // The app's copy where it is now; null when it isn't on this phone (restored from a backup on another one).
   const video = attempt?.videoUri ? takeUri(attempt.videoUri) : null;
@@ -80,7 +84,27 @@ export default function AttemptView() {
     ]);
   }
 
-  if (!attempt) return <View style={styles.screen} />;
+  if (error) {
+    return (
+      <View style={styles.screen}>
+        <LoadFailed title={tr('这次扣篮没加载出来')} error={error} onRetry={load} />
+      </View>
+    );
+  }
+  if (attempt === undefined) {
+    return (
+      <View style={styles.screen}>
+        <Loading />
+      </View>
+    );
+  }
+  if (attempt === null) {
+    return (
+      <View style={styles.screen}>
+        <Empty title={tr('找不到这次扣篮记录')} hint={tr('可能已经删掉了。')} />
+      </View>
+    );
+  }
   const vz = take?.metrics.vz;
   const height = vz ? jumpHeightCm(vz) : null;
 

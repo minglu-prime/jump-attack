@@ -190,7 +190,7 @@ it('asks before closing throws away a take, and closes straight away before film
 });
 
 it('asks the same when Android’s back button would leave a take behind', async () => {
-  const back: (() => boolean | null | undefined)[] = [];
+  const back: ((...e: never[]) => boolean | null | undefined)[] = [];
   const listen = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_e, h) => {
     back.push(h);
     return { remove: () => back.splice(back.indexOf(h), 1) };

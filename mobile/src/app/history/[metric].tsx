@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { TrendChart } from '@/components/TrendChart';
-import { Empty } from '@/components/ui';
+import { Empty, LoadFailed, Loading } from '@/components/ui';
 import { listMetricResults, listSessionValues, sessionTimings, type SessionResult } from '@/db/repo';
 import { fastestSetLoads, listVbtSets } from '@/db/vbt';
 import { judgeChange, onPoorDay, trendBaseline } from '@/domain/assess';
@@ -33,7 +33,8 @@ export default function MetricHistory() {
   const color = def ? metricColor(def) : colors.accent;
   const db = useSQLiteContext();
   const { current } = useAthlete();
-  const [results, setResults] = useState<SessionResult[]>([]);
+  const [results, setResults] = useState<SessionResult[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
   // Each session's attempts, needed only for tests scored as a set (repeated sprints).
   const [attempts, setAttempts] = useState<Record<string, number[]>>({});
   // For VBT lifts, the load of each session's fastest set: velocities only compare at the same load.
@@ -43,20 +44,36 @@ export default function MetricHistory() {
   // Days the athlete was in poor shape: listed, but left out of the trend.
   const [poor, setPoor] = useState<Set<ISODate>>(new Set());
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!current || !def) return;
-      listMetricResults(db, current.id, def).then(async (rows) => {
+  const load = useCallback(() => {
+    if (!current || !def) return;
+    let alive = true;
+    // Everything the page shows arrives together, so the chart never draws before what it is read against.
+    Promise.all([
+      listMetricResults(db, current.id, def).then(async (rows) => [rows, await loadPoorDaysOf(db, current.id, def.code, rows)] as const),
+      def.aggregate === 'mean' ? listSessionValues(db, current.id, def.code) : null,
+      def.category === 'vbt' ? listVbtSets(db, current.id, def.code).then(fastestSetLoads) : null,
+      def.category === 'speed' ? sessionTimings(db, current.id, def.code) : null,
+    ]).then(
+      ([[rows, poorDays], values, setLoadsBy, timed]) => {
+        if (!alive) return;
         setResults(rows);
-        setPoor(await loadPoorDaysOf(db, current.id, def.code, rows));
-      });
-      if (def.aggregate === 'mean') listSessionValues(db, current.id, def.code).then(setAttempts);
-      if (def.category === 'vbt') listVbtSets(db, current.id, def.code).then((sets) => setLoads(fastestSetLoads(sets)));
-      if (def.category === 'speed') sessionTimings(db, current.id, def.code).then(setTimings);
-    }, [db, current, def]),
-  );
+        setPoor(poorDays);
+        if (values) setAttempts(values);
+        if (setLoadsBy) setLoads(setLoadsBy);
+        if (timed) setTimings(timed);
+        setError(null);
+      },
+      (e) => alive && setError(String(e)),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [db, current, def]);
+  useFocusEffect(load);
 
   if (!def) return <Empty title={tr('找不到这个指标')} />;
+  if (error) return <LoadFailed title={tr('历史没加载出来')} error={error} onRetry={load} />;
+  if (!results) return <Loading />;
   // A load only for sets lifted with one: a tested 1RM is itself the load.
   const timed = results.map((r) => ({ ...r, timing: timings[r.session_id] ?? 'video' }));
   const previous = previousSameTiming(timed);

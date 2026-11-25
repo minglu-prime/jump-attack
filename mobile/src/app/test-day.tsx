@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/Icon';
-import { Button, Card } from '@/components/ui';
+import { Button, Card, LoadFailed, Loading } from '@/components/ui';
 import { newSessionId, type Athlete } from '@/db/repo';
 import { athleteName } from '@/domain/athletes';
 import { toISODate } from '@/domain/dates';
@@ -35,15 +35,27 @@ export default function TestDay() {
     if (Array.isArray(picked)) return athletes.filter((a) => picked.includes(a.id));
     return current ? [current] : [];
   }, [picked, athletes, current]);
-  const lanes = loaded.ids.join() === crew.map((a) => a.id).join() ? loaded.lanes : [];
+  const ready = loaded.ids.join() === crew.map((a) => a.id).join();
+  const lanes = ready ? loaded.lanes : [];
+  const [error, setError] = useState<string | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      const today = toISODate(new Date());
-      const ids = crew.map((a) => a.id);
-      Promise.all(ids.map((id) => loadTestDay(db, id, today))).then((lanes) => setLoaded({ ids, lanes }));
-    }, [db, crew]),
-  );
+  const load = useCallback(() => {
+    const today = toISODate(new Date());
+    const ids = crew.map((a) => a.id);
+    let alive = true;
+    Promise.all(ids.map((id) => loadTestDay(db, id, today))).then(
+      (lanes) => {
+        if (!alive) return;
+        setLoaded({ ids, lanes });
+        setError(null);
+      },
+      (e) => alive && setError(String(e)),
+    );
+    return () => {
+      alive = false;
+    };
+  }, [db, crew]);
+  useFocusEffect(load);
 
   function toggle(id: number) {
     const now = crew.map((a) => a.id);
@@ -76,6 +88,10 @@ export default function TestDay() {
       </View>
     </View>
   );
+
+  if (error) return <LoadFailed title={tr('测试日没加载出来')} error={error} onRetry={load} />;
+  // The first read, or the crew just changed: their tests are on the way.
+  if (!ready && crew.length > 0) return <Loading />;
 
   if (crew.length > 1 && lanes.length > 0) {
     const turn = nextTurn(lanes);

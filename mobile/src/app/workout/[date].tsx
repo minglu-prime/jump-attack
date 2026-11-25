@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { router, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import { AccessibilityInfo, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,7 +9,7 @@ import { Icon } from '@/components/Icon';
 import { FadeIn, nextLayout, Swap, useReduceMotion } from '@/components/motion';
 import { ScoreScale } from '@/components/ScoreScale';
 import { AdjustmentNote } from '@/components/training';
-import { Button, Card, Empty } from '@/components/ui';
+import { Button, Card, Empty, LoadFailed, Loading } from '@/components/ui';
 import { listPain, listTestJumps, setPain } from '@/db/pain';
 import { finishWorkout, getWorkout, lastLoads, listSets, logSet, setSessionLoad, unlogSet, type Workout } from '@/db/training';
 import { addVbtSet, listVbtSets } from '@/db/vbt';
@@ -51,7 +51,8 @@ export default function WorkoutScreen() {
   const { current } = useAthlete();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [finishing, setFinishing] = useState(false);
-  const scroll = useRef<ScrollView>(null);
+  const [error, setError] = useState<string | null>(null);
+  const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const reduce = useReduceMotion();
 
   const reload = useCallback(async () => {
@@ -78,13 +79,28 @@ export default function WorkoutScreen() {
     setLoaded({ data, workout, sets, loads, suggested, day, warmupKg: Object.fromEntries(warmups), personal, knee, pain, testJumps });
   }, [db, current, date]);
 
-  useFocusEffect(
-    useCallback(() => {
-      reload();
-    }, [reload]),
-  );
+  const open = useCallback(() => {
+    reload().then(
+      () => setError(null),
+      (e) => setError(String(e)),
+    );
+  }, [reload]);
+  useFocusEffect(open);
 
-  if (loaded === null) return null;
+  if (error) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <LoadFailed title={tr('训练没加载出来')} error={error} onRetry={open} />
+      </SafeAreaView>
+    );
+  }
+  if (loaded === null) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <Loading />
+      </SafeAreaView>
+    );
+  }
   const planned = loaded !== 'none' && planDay(loaded.data.template, loaded.data.plan, date);
   if (loaded === 'none' || !planned) {
     return (

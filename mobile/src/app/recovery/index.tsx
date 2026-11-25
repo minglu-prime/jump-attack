@@ -5,7 +5,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, Card, Chip } from '@/components/ui';
+import { Button, Card, Chip, LoadFailed, Loading } from '@/components/ui';
 import { listRecoveryDays, saveRecoveryDay, type RecoverySource } from '@/db/recovery';
 import { addDays, shortDate, type ISODate } from '@/domain/dates';
 import { manualProblem, parseNumber } from '@/domain/entry';
@@ -56,6 +56,8 @@ export default function Recovery() {
   const [sources, setSources] = useState<Sources>({});
   const [importNote, setImportNote] = useState<string | null>(null);
   const [savedOn, setSavedOn] = useState<ISODate | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(
     async (d: ISODate) => {
@@ -65,15 +67,18 @@ export default function Recovery() {
       setForm(toForm(rows.find((r) => r.date === d)));
       setSources({});
       setImportNote(null);
+      setLoaded(true);
     },
     [db, current],
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      load(date);
-    }, [load, date]),
-  );
+  const open = useCallback(() => {
+    load(date).then(
+      () => setError(null),
+      (e) => setError(String(e)),
+    );
+  }, [load, date]);
+  useFocusEffect(open);
 
   const read = readRecovery(days, today);
   const todayRow = days.find((d) => d.date === today);
@@ -148,6 +153,21 @@ export default function Recovery() {
       { text: tr('继续填'), style: 'cancel' },
       { text: tr('不保存'), style: 'destructive', onPress: () => setDate(d) },
     ]);
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['bottom']}>
+        <LoadFailed title={tr('恢复数据没加载出来')} error={error} onRetry={open} />
+      </SafeAreaView>
+    );
+  }
+  if (!loaded) {
+    return (
+      <SafeAreaView style={styles.screen} edges={['bottom']}>
+        <Loading />
+      </SafeAreaView>
+    );
   }
 
   return (
