@@ -1955,4 +1955,6 @@ export const en: Record<string, string> = {
   '测试日没加载出来': 'The test day didn’t load',
   '找不到这次成绩': 'This result isn’t there',
   '恢复数据没加载出来': 'The recovery data didn’t load',
+  '已经在另一个标签页里打开了': 'Already open in another tab',
+  '同一时间只能在一个标签页里用。关掉另一个标签页，这里会自动打开。': 'It can only be used in one tab at a time. Close the other tab and it opens here by itself.',
 };
