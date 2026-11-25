@@ -529,6 +529,9 @@ export const de: Record<string, string> = {
   '用这一段': 'Diese Aufnahme nehmen',
 
   // app/measure/capture.tsx
+  '先填站立摸高': 'Zuerst die Reichhöhe im Stand eintragen',
+  '助跑摸高 = 站立摸高 + 跳起的高度。自然站立、单臂上举，量指尖摸到的高度。': 'Anlauf-Reichhöhe = Reichhöhe im Stand + Sprunghöhe. Flach auf beiden Füßen stehen, einen Arm nach oben strecken und messen, wo die Fingerspitzen hinkommen.',
+  '保存站立摸高': 'Reichhöhe im Stand speichern',
   '录制 · {name}': 'Aufnahme · {name}',
   '第 {attempt} 次': 'Versuch {attempt}',
 

@@ -529,6 +529,9 @@ export const en: Record<string, string> = {
   '用这一段': 'Use this take',
 
   // app/measure/capture.tsx
+  '先填站立摸高': 'Enter your standing reach first',
+  '助跑摸高 = 站立摸高 + 跳起的高度。自然站立、单臂上举，量指尖摸到的高度。': 'Approach touch = standing reach + how high you jump. Stand flat-footed, reach up with one arm and measure where your fingertips touch.',
+  '保存站立摸高': 'Save standing reach',
   '录制 · {name}': 'Recording · {name}',
   '第 {attempt} 次': 'Attempt {attempt}',
 
