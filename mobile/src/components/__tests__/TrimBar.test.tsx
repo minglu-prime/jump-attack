@@ -50,3 +50,9 @@ it('scrubs only inside the part kept', () => {
   act(() => strip.props.onResponderMove(touch(0)));
   expect(calls.onScrub).toHaveBeenLastCalledWith(30);
 });
+
+it('shows the start and end times in fixed digit slots, so they do not shift while a handle is dragged', () => {
+  const { r } = render({ from: 30, to: 89 });
+  const labels = r.root.findAll((n) => n.props.accessible === true && typeof n.props.accessibilityLabel === 'string').map((n) => n.props.accessibilityLabel);
+  expect(labels).toEqual(expect.arrayContaining(['1.00 s', '2.97 s']));
+});

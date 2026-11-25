@@ -12,7 +12,7 @@ import { FadeIn, nextLayout, Rise, Swap, tick } from '@/components/motion';
 import { PulseProgress } from '@/components/PulseProgress';
 import { TrendChart } from '@/components/TrendChart';
 import { TrimBar } from '@/components/TrimBar';
-import { Button, Chip, Empty } from '@/components/ui';
+import { Button, Chip, Digits, Empty } from '@/components/ui';
 import { analysisHistory, saveAnalysedTrials } from '@/db/analysis';
 import { touchOffsetFor } from '@/db/touch';
 import { realChange, type RealChange } from '@/domain/agreement';
@@ -375,8 +375,8 @@ export default function Analyse() {
           )}
           {phase.name !== 'running' && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>#{frame}</Text>
-              <Text style={styles.badgeTime}>{Math.round((frame / fps) * 1000)} ms</Text>
+              <Digits style={styles.badgeText}>{`#${frame}`}</Digits>
+              <Digits style={styles.badgeTime}>{`${Math.round((frame / fps) * 1000)} ms`}</Digits>
             </View>
           )}
         </View>

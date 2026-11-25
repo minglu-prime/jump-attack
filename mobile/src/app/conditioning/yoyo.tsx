@@ -96,11 +96,11 @@ function Running({ startAt, onStop }: { startAt: number; onStop: (completed: num
           <Digits style={styles.countdown}>{decimal(toBeep, 1)}</Digits>
           <View style={runStyles.stats}>
             <View style={runStyles.stat}>
-              <Text style={runStyles.statValue}>{yoyoDistance(yoyoCompletedAt(t))}</Text>
+              <Digits style={runStyles.statValue}>{String(yoyoDistance(yoyoCompletedAt(t)))}</Digits>
               <Text style={runStyles.statLabel}>{tr('已完成 m')}</Text>
             </View>
             <View style={runStyles.stat}>
-              <Text style={runStyles.statValue}>{clock(Math.max(0, t))}</Text>
+              <Digits style={runStyles.statValue}>{clock(Math.max(0, t))}</Digits>
               <Text style={runStyles.statLabel}>{tr('用时')}</Text>
             </View>
           </View>

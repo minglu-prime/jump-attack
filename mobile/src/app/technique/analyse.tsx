@@ -12,7 +12,7 @@ import { Rise, tick } from '@/components/motion';
 import { OutcomeButtons } from '@/components/OutcomeButtons';
 import { PoseReader, type ClipInfo, type PoseReaderHandle } from '@/components/PoseReader';
 import { PulseProgress } from '@/components/PulseProgress';
-import { Button, Chip } from '@/components/ui';
+import { Button, Chip, Digits } from '@/components/ui';
 import { addDunkAttempt } from '@/db/dunkAttempts';
 import { addTechniqueTake, reachByDay, type TechniqueSource } from '@/db/technique';
 import { toISODate } from '@/domain/dates';
@@ -301,8 +301,8 @@ export default function TechniqueAnalyse() {
           )}
           {!running && (
             <View style={styles.badge} pointerEvents="none">
-              <Text style={styles.badgeText}>#{frame}</Text>
-              <Text style={styles.badgeTime}>{decimal((frame / fps), 2)} s</Text>
+              <Digits style={styles.badgeText}>{`#${frame}`}</Digits>
+              <Digits style={styles.badgeTime}>{`${decimal(frame / fps, 2)} s`}</Digits>
             </View>
           )}
         </View>
