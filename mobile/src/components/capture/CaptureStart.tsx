@@ -13,15 +13,17 @@ import { colors, fonts, radius } from '@/theme';
  * Where a filmed test starts, the same for jumps and VBT sets: the two ways in (film in the app, import a clip) come
  * first, how to film follows.
  */
-export default function CaptureStart({ title, subtitle, guide, note, onClose, onImport, onFilm, onManual }: CaptureProps) {
+export default function CaptureStart({ title, subtitle, guide, note, onClose, onImport, onFilm, onManual, gate }: CaptureProps) {
   return (
     <SafeAreaView style={styles.screen}>
       <CaptureHeader title={title} subtitle={subtitle} onClose={onClose} />
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.choices}>
-          {onFilm && <Choice icon="camera" title={tr('App 里直接拍')} detail={guide.film} primary onPress={onFilm} />}
-          <Choice icon="gallery" title={tr('从相册导入视频')} detail={guide.import} primary={!onFilm} onPress={onImport} />
-        </View>
+        {gate ?? (
+          <View style={styles.choices}>
+            {onFilm && <Choice icon="camera" title={tr('App 里直接拍')} detail={guide.film} primary onPress={onFilm} />}
+            <Choice icon="gallery" title={tr('从相册导入视频')} detail={guide.import} primary={!onFilm} onPress={onImport} />
+          </View>
+        )}
         <Text style={styles.section}>{guide.stepsTitle}</Text>
         {guide.steps.map((s, i) => (
           <View key={s.title} style={styles.step}>

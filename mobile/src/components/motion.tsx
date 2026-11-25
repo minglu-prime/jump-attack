@@ -94,20 +94,21 @@ export function Rise({ children, index = 0, style }: { children: ReactNode; inde
  * Fades its children in where they stand: one state replacing another in place (loading → content, a label → a
  * spinner, an error → the retry's result). Give it a `key` that changes with the state, so each new state fades in.
  * With `pop`, it also grows from just under full size: for a tick or a badge confirming something just happened.
+ * With `delay`, it stays invisible that long first (with less motion asked for, it then appears without a fade).
  */
-export function FadeIn({ children, pop, style }: { children: ReactNode; pop?: boolean; style?: StyleProp<ViewStyle> }) {
+export function FadeIn({ children, pop, delay = 0, style }: { children: ReactNode; pop?: boolean; delay?: number; style?: StyleProp<ViewStyle> }) {
   const reduce = useReduceMotion();
   const [p] = useState(() => new Animated.Value(0));
   useEffect(() => {
     if (reduce == null) return;
-    if (reduce) {
+    if (reduce && !delay) {
       p.setValue(1);
       return;
     }
-    const a = Animated.timing(p, { toValue: 1, duration: motion.swap, easing: ease, useNativeDriver: true });
+    const a = Animated.timing(p, { toValue: 1, duration: reduce ? 0 : motion.swap, delay, easing: ease, useNativeDriver: true });
     a.start();
     return () => a.stop();
-  }, [p, reduce]);
+  }, [p, reduce, delay]);
   const scale = pop ? p.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) : 1;
   return <Animated.View style={[style, { opacity: p, transform: [{ scale }] }]}>{children}</Animated.View>;
 }

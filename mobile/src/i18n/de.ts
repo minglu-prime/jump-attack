@@ -216,7 +216,7 @@ export const de: Record<string, string> = {
   '录像文件不在备份里，只备份测试结果、训练记录、恢复数据和档案。': 'Videos sind nicht in der Sicherung, nur Testergebnisse, Trainingsprotokolle, Erholungsdaten und Profile.',
   '导出备份文件': 'Sicherungsdatei exportieren',
   '从备份文件恢复': 'Aus Sicherungsdatei wiederherstellen',
-  '云端还没接好：Supabase 项目的地址和 key 填进 src/sync/config.ts 后，这里就能登录。现在可以先用下面的备份文件。': 'Die Cloud ist noch nicht eingerichtet: Sobald URL und Key des Supabase-Projekts in src/sync/config.ts stehen, kannst du dich hier anmelden. Bis dahin die Sicherungsdatei unten verwenden.',
+  '云端还没接好：现在先用下面的备份文件保存数据，换手机时用它恢复。': 'Die Cloud ist noch nicht eingerichtet: Sichere deine Daten vorerst mit der Sicherungsdatei unten und stelle sie damit auf einem neuen Handy wieder her.',
   '已登录 {email}': 'Angemeldet als {email}',
   '打开 App 和切到后台时会自动同步。': 'Synchronisiert automatisch beim Öffnen der App und wenn sie in den Hintergrund geht.',
   '手机和云端的数据不一样，选一份保留': 'Handy und Cloud haben unterschiedliche Daten; wähle aus, welche bleiben',
@@ -336,6 +336,8 @@ export const de: Record<string, string> = {
   '改扣篮线': 'Dunk-Linie ändern',
 
   // app/exercise/[code].tsx
+  '删掉自己拍的示范？': 'Eigenes Demo-Video löschen?',
+  '删掉后换回画的示范图，这段视频不能恢复。': 'Danach erscheint wieder die gezeichnete Vorlage; das Video lässt sich nicht wiederherstellen.',
   '这个动作还没有示范': 'Für diese Übung gibt es noch keine Vorführung',
   '起始': 'Start',
   '关键动作': 'Schlüsselposition',
@@ -527,6 +529,9 @@ export const de: Record<string, string> = {
   '用这一段': 'Diese Aufnahme nehmen',
 
   // app/measure/capture.tsx
+  '先填站立摸高': 'Zuerst die Reichhöhe im Stand eintragen',
+  '助跑摸高 = 站立摸高 + 跳起的高度。自然站立、单臂上举，量指尖摸到的高度。': 'Anlauf-Reichhöhe = Reichhöhe im Stand + Sprunghöhe. Flach auf beiden Füßen stehen, einen Arm nach oben strecken und messen, wo die Fingerspitzen hinkommen.',
+  '保存站立摸高': 'Reichhöhe im Stand speichern',
   '录制 · {name}': 'Aufnahme · {name}',
   '第 {attempt} 次': 'Versuch {attempt}',
 

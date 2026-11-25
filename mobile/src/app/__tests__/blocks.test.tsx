@@ -122,3 +122,17 @@ it('starts a new block plan with the block the diagnosis calls for', async () =>
   expect(plan.templateCode).toBe(BLOCK_PLAN_CODE);
   expect(plan.blocks).toEqual([expect.objectContaining({ start: today, type: 'transfer' })]);
 });
+
+it('swaps out the day picked first when another day is tapped with all days chosen', async () => {
+  const r = await render(<NewPlan />);
+  const chip = (day: string) => r.root.find((n) => n.props.label === day && typeof n.props.onPress === 'function');
+  expect(['周一', '周三', '周五'].map((d) => chip(d).props.selected)).toEqual([true, true, true]);
+
+  await act(async () => chip('周二').props.onPress());
+  expect(['周一', '周二', '周三', '周五'].map((d) => chip(d).props.selected)).toEqual([false, true, true, true]);
+
+  jest.spyOn(Alert, 'alert').mockImplementation((_t, _m, buttons) => buttons?.find((b) => b.text === '更换')?.onPress?.());
+  await act(async () => pressable(r.root, '开始这个计划').props.onPress());
+  await act(async () => {});
+  expect((await getActivePlan(mockDb, 1))!.weekdays).toEqual([2, 3, 5]);
+});
