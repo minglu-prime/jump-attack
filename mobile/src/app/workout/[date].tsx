@@ -6,7 +6,7 @@ import { AccessibilityInfo, Alert, Pressable, ScrollView, StyleSheet, Text, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
-import { FadeIn, nextLayout, Swap } from '@/components/motion';
+import { FadeIn, nextLayout, Swap, useReduceMotion } from '@/components/motion';
 import { ScoreScale } from '@/components/ScoreScale';
 import { AdjustmentNote } from '@/components/training';
 import { Button, Card, Empty } from '@/components/ui';
@@ -51,6 +51,8 @@ export default function WorkoutScreen() {
   const { current } = useAthlete();
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [finishing, setFinishing] = useState(false);
+  const scroll = useRef<ScrollView>(null);
+  const reduce = useReduceMotion();
 
   const reload = useCallback(async () => {
     if (!current) return;
@@ -149,6 +151,8 @@ export default function WorkoutScreen() {
         // The summary opens at the top and the footer turns into 返回: both ease in rather than jump.
         nextLayout();
         await reload();
+        // Pressed at the bottom of the page: bring the summary (RPE, minutes, knee) into view instead of leaving it above.
+        scroll.current?.scrollTo({ y: 0, animated: reduce === false });
       } catch (e) {
         Alert.alert(tr('没能完成训练'), String(e));
       } finally {
@@ -168,7 +172,7 @@ export default function WorkoutScreen() {
   return (
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <Stack.Screen options={{ title: `${session.code} · ${session.name}` }} />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+      <ScrollView ref={scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Text style={text.muted}>
           {shortDate(date)} · {session.focus}
         </Text>

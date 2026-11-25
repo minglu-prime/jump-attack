@@ -1,6 +1,6 @@
 // Pre-workout CMJ as a 3-jump mean and trackload-style session load, end to end against an in-memory database.
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
-import { Alert, Text, TextInput } from 'react-native';
+import { Alert, ScrollView, Text, TextInput } from 'react-native';
 
 import { migrate } from '@/db/migrations';
 import { addTrial, ensureSession, getAthlete, type Athlete } from '@/db/repo';
@@ -90,8 +90,11 @@ it('asks for the session RPE and minutes after training and keeps the load', asy
   mockParams = { date: '2026-11-02' };
   const r = await render(<WorkoutScreen />);
   jest.spyOn(Alert, 'alert').mockImplementation((_t, _m, buttons) => buttons?.find((b) => b.text === '结束')?.onPress?.());
+  const scrollTo = jest.spyOn(r.root.findByType(ScrollView).instance, 'scrollTo');
   await act(async () => pressable(r.root, '完成训练').props.onPress());
   await act(async () => {});
+  // 完成训练 is pressed at the bottom of the page; the summary with the RPE and minutes opens at the top, so it is brought into view.
+  expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ y: 0 }));
 
   const minutes = r.root.find((n) => n.type === TextInput && n.props.accessibilityLabel === '训练时长（分钟）');
   await act(async () => minutes.props.onChangeText('60'));
