@@ -125,6 +125,25 @@ export const DROP_JUMP: MetricDef & { short: string; color: string } = {
 };
 
 /**
+ * Drop landing jump: step off a box, land and absorb, then jump as high as possible in one go, arms free. Scored by
+ * jump height; the long contact is the point, so the contact and RSImod (height ÷ contact) are shown, not ranked.
+ * Marked like a drop jump: touch-down, take-off, landing (domain/marking.ts).
+ */
+export const DROP_LANDING_JUMP: MetricDef & { short: string; color: string } = {
+  code: 'drop_landing_jump',
+  short: '落跳',
+  name: '跳箱落地反跳',
+  category: 'jump',
+  unit: 'cm',
+  decimals: 1,
+  color: '#6A46BE',
+  use: '从跳箱落下缓冲后全力起跳，看落地后还能跳多高',
+  capture: ['contact', 'manual'],
+  range: [5, 120],
+  entryHint: JUMP_ENTRY_HINT,
+};
+
+/**
  * The 10/5 repeated jump test: ten maximal rebounds in a row, as high as possible with as short a contact as possible;
  * the result is the mean RSI of the best five (Harper, Hobbs & Moore 2011). One set is one trial, its jumps in
  * `trial.detail.jumps`. Only from video analysis (domain/jumpAnalysis.ts) or typed in from another app.
@@ -322,6 +341,7 @@ export const METRICS: MetricDef[] = [
   ...JUMP_TESTS,
   LOADED_SJ,
   DROP_JUMP,
+  DROP_LANDING_JUMP,
   REPEATED_JUMP,
   ...CONDITIONING_TESTS,
   ...SPEED_TESTS,

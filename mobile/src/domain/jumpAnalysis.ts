@@ -98,7 +98,8 @@ export function frameError(ftS: number, fps: number): number {
   return ((G * ftS) / 4 / fps) * 100;
 }
 
-export function analyseJumps(events: JumpEvents[], opts: { kind: AnalysisKind; captureFps: number; boxCm?: number; keep?: number[] }): Analysis {
+/** `longContact`: a slow contact is the test (drop landing jump), so it isn't flagged. */
+export function analyseJumps(events: JumpEvents[], opts: { kind: AnalysisKind; captureFps: number; boxCm?: number; keep?: number[]; longContact?: boolean }): Analysis {
   const { kind, captureFps: fps } = opts;
   if (fps <= 0) throw new Error('fps must be positive');
   const boxM = opts.boxCm != null ? opts.boxCm / 100 : undefined;
@@ -114,7 +115,7 @@ export function analyseJumps(events: JumpEvents[], opts: { kind: AnalysisKind; c
       r.rsi = f.rsi;
       r.rsr = f.rsr;
       if (f.dri != null) r.dri = f.dri;
-      if (f.gctS > SLOW_CONTACT_S) r.flags.push('slow-contact');
+      if (f.gctS > SLOW_CONTACT_S && !opts.longContact) r.flags.push('slow-contact');
     }
     if (frameError(f.ftS, fps) > MAX_FRAME_ERROR_CM) r.flags.push('low-fps');
     return r;

@@ -7,7 +7,7 @@ import { Icon } from '@/components/Icon';
 import { loadDiagnosis } from '@/db/dunk';
 import { newSessionId } from '@/db/repo';
 import { BLOCKS, type DunkDiagnosis } from '@/domain/dunk';
-import { APPROACH_TOUCH, DROP_JUMP, JUMP_TESTS, LOADED_SJ, REPEATED_JUMP } from '@/domain/metrics';
+import { APPROACH_TOUCH, DROP_JUMP, DROP_LANDING_JUMP, JUMP_TESTS, LOADED_SJ, REPEATED_JUMP } from '@/domain/metrics';
 import { decimal, localized, tr } from '@/i18n';
 import { isWeb } from '@/media/runtime';
 import { useAthlete } from '@/state/athlete';
@@ -63,6 +63,7 @@ export default function JumpTests() {
       {JUMP_TESTS.map((t) => (
         <Row key={t.code} code={t.short} color={t.color} name={t.name} tag={todo.has(t.code)} onPress={() => capture(t.code)} />
       ))}
+      <Row code={DROP_LANDING_JUMP.short} color={DROP_LANDING_JUMP.color} name={DROP_LANDING_JUMP.name} hint={tr('从跳箱落下，缓冲后全力起跳')} onPress={() => capture(DROP_LANDING_JUMP.code)} />
       <View style={styles.note}>
         <Text style={styles.noteText}>{tr('每次测试建议做 3 次，取最好成绩。')}</Text>
       </View>

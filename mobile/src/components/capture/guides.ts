@@ -56,6 +56,22 @@ const DROP_JUMP: CaptureGuide = {
   maxSeconds: 15,
 };
 
+const DROP_LANDING: CaptureGuide = {
+  ...SLOW_MO_CHOICE,
+  steps: [
+    SLOW_MO_SETUP,
+    { title: '侧面拍箱子和落点', text: '手机放在地面或三脚架上，距离约 2 米，镜头对准脚踝高度。箱子边缘和落地点都要在画面里，脚前别放东西挡住。' },
+    { title: '用「慢动作」拍', text: '站上箱子后开拍。一只脚迈出箱子自然落下，双脚着地屈膝缓冲，接着连贯地全力向上跳，可以摆臂。落地站稳后再停。' },
+    { title: '导入自动分析', text: 'App 自动找三帧：落下后脚刚着地、起跳脚尖刚离地、再次落地，不准可以逐帧调。每次用同一个高度的箱子，成绩才能比。' },
+  ],
+  checks: ['手机放稳，侧对箱子', '箱子边缘和落地点都在画面里'],
+  feetOverlay: true,
+  recordingHint: '起跳并落地站稳后，点击停止',
+  doneHint: '下一步逐帧找到触地、起跳和落地。',
+  tips: '1. 手机放在侧面，箱子和落地点都在画面里。\n2. 从箱子上迈出落下，屈膝缓冲后连贯地全力起跳，可以摆臂。\n3. 落地站稳后再停止录制。\n4. 优先用 240 fps，跳高误差约 ±1 cm。',
+  maxSeconds: 15,
+};
+
 const REPEATED_JUMP: CaptureGuide = {
   ...SLOW_MO_CHOICE,
   steps: [
@@ -144,10 +160,11 @@ const SLAM: CaptureGuide = {
 };
 
 // Shown in the current language (i18n).
-localized([JUMP, DROP_JUMP, REPEATED_JUMP, APPROACH_TOUCH, SPRINT, LIFT_SETUP, LIFT, SLAM], 'film', 'import', 'stepsTitle', 'title', 'text', 'checks', 'recordingHint', 'doneHint', 'tips');
+localized([JUMP, DROP_JUMP, DROP_LANDING, REPEATED_JUMP, APPROACH_TOUCH, SPRINT, LIFT_SETUP, LIFT, SLAM], 'film', 'import', 'stepsTitle', 'title', 'text', 'checks', 'recordingHint', 'doneHint', 'tips');
 
 export function captureGuide(category: Category, code?: string): CaptureGuide {
   if (code === 'dj_rsi') return DROP_JUMP;
+  if (code === 'drop_landing_jump') return DROP_LANDING;
   if (code === 'rj_rsi') return REPEATED_JUMP;
   if (code === 'approach_touch') return APPROACH_TOUCH;
   if (code === 'med_ball_slam') return SLAM;
