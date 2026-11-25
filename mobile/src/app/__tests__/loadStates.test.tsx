@@ -119,6 +119,8 @@ describe.each([
     loader().mockImplementationOnce(never);
     const r = await render(screen());
     expect(r.root.findAllByType(ActivityIndicator).length).toBeGreaterThan(0);
+    // The shared <Loading/>: it fades in late (no flash on a fast read) and tells a screen reader what is going on.
+    expect(r.root.findAll((n) => n.props.accessibilityLabel === '正在加载').length).toBeGreaterThan(0);
     expect(texts(r.root)).not.toContain('还没有');
     expect(texts(r.root)).not.toContain('—');
   });

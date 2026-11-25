@@ -1,14 +1,14 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BlockReason, blockLabel, RetestCard, SuggestionCard } from '@/components/blocks';
 import { Icon } from '@/components/Icon';
 import { AdjustmentNote, SessionItems, WeekStrip, type DayStatus } from '@/components/training';
 import { FadeIn } from '@/components/motion';
-import { Button, Card, LoadFailed } from '@/components/ui';
+import { Button, Card, LoadFailed, Loading } from '@/components/ui';
 import { newSessionId } from '@/db/repo';
 import { listPain } from '@/db/pain';
 import { insertDeload } from '@/db/training';
@@ -73,7 +73,7 @@ export default function Train() {
   if (!loaded) {
     return (
       <SafeAreaView style={[styles.screen, styles.center]}>
-        <ActivityIndicator color={colors.accent} />
+        <Loading />
       </SafeAreaView>
     );
   }
