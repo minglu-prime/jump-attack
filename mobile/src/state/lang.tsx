@@ -28,9 +28,26 @@ function phoneLang(): Lang {
 
 const resolve = (choice: LangChoice): Lang => (choice === 'system' ? phoneLang() : choice);
 
-/** Sets the language before anything renders: the one picked under 我的, otherwise the phone's. */
-export function initLanguage(): void {
-  setLang(resolve(storedChoice()));
+/**
+ * Sets the language before anything renders: the one picked under 我的, otherwise the phone's. `stored` false skips
+ * reading the pick, for a web page that may not touch the database yet (another tab has it): the phone's for now.
+ */
+export function initLanguage(stored = true): void {
+  setLang(resolve(stored ? storedChoice() : 'system'));
+}
+
+/**
+ * The web page's start-up read of the pick, once it may use the database: asynchronous, because the browser's
+ * database refuses a synchronous call until its engine has loaded.
+ */
+export async function loadLanguage(): Promise<void> {
+  let v: string | null = null;
+  try {
+    v = await Storage.getItem(KEY);
+  } catch (e) {
+    console.error('Could not read the language choice, using the phone’s:', e);
+  }
+  setLang(resolve(isLang(v) ? v : 'system'));
 }
 
 type LangContextValue = { lang: Lang; choice: LangChoice; choose: (choice: LangChoice) => void };

@@ -12,6 +12,7 @@ jest.mock('expo-sqlite/kv-store', () => ({
   __esModule: true,
   default: {
     getItemSync: (k: string) => mockKv.get(k) ?? null,
+    getItem: async (k: string) => mockKv.get(k) ?? null,
     setItemSync: (k: string, v: string) => void mockKv.set(k, v),
     removeItemSync: (k: string) => mockKv.delete(k),
   },
@@ -93,4 +94,28 @@ it('still starts when the stored choice can’t be read', () => {
   mockKv.set('language', 'fr');
   initLanguage();
   expect(getLang()).toBe('de');
+});
+
+it('can start in the phone’s language without reading the stored choice, for a web page still waiting for the database', () => {
+  mockKv.set('language', 'en');
+  const kv = jest.requireMock('expo-sqlite/kv-store').default;
+  const read = jest.spyOn(kv, 'getItemSync');
+  initLanguage(false);
+  expect(getLang()).toBe('de');
+  expect(read).not.toHaveBeenCalled();
+  read.mockRestore();
+  mockKv.delete('language');
+});
+
+it('reads the picked language without a synchronous call, for the web page once it has the database', async () => {
+  mockKv.set('language', 'en');
+  const { loadLanguage } = jest.requireActual('../lang') as typeof import('../lang');
+  const kv = jest.requireMock('expo-sqlite/kv-store').default;
+  const sync = jest.spyOn(kv, 'getItemSync');
+  setLang('zh');
+  await loadLanguage();
+  expect(getLang()).toBe('en');
+  expect(sync).not.toHaveBeenCalled();
+  sync.mockRestore();
+  mockKv.delete('language');
 });

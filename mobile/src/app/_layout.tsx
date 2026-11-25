@@ -2,20 +2,22 @@ import { useFonts } from 'expo-font';
 import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { ErrorScreen } from '@/components/ErrorScreen';
 import { KeyboardDoneBar } from '@/components/KeyboardDoneBar';
 import { migrate } from '@/db/migrations';
 import { tr } from '@/i18n';
 import { AthleteProvider } from '@/state/athlete';
-import { initLanguage, LangProvider } from '@/state/lang';
+import { initLanguage, LangProvider, loadLanguage } from '@/state/lang';
 import { SyncProvider } from '@/state/sync';
 import { colors, fonts } from '@/theme';
+import { useDatabaseTurn } from '@/web/databaseTurn';
 import { setupWeb, webDatabaseBlocked } from '@/web/setup';
 
 setupWeb();
-initLanguage();
+// On the web the stored language is read once this page has the database (useDatabaseTurn).
+initLanguage(Platform.OS !== 'web');
 
 const theme = {
   ...DefaultTheme,
@@ -30,12 +32,22 @@ export default function RootLayout() {
     [fonts.numeric]: require('@expo-google-fonts/big-shoulders-display/BigShouldersDisplay_700Bold.ttf'),
     [fonts.numericBold]: require('@expo-google-fonts/big-shoulders-display/BigShouldersDisplay_800ExtraBold.ttf'),
   });
-  if (!fontsLoaded) return null;
+  const turn = useDatabaseTurn(loadLanguage);
+  if (!fontsLoaded || turn === 'asking') return null;
   if (webDatabaseBlocked()) {
     return (
       <View style={styles.blocked}>
         <Text style={styles.blockedTitle}>{tr('正在准备本地数据库…')}</Text>
         <Text style={styles.blockedText}>{tr('如果一直停在这里，请用最新版 Safari 或 Chrome 打开这个网址（微信、QQ 里的内置浏览器不支持）。')}</Text>
+      </View>
+    );
+  }
+
+  if (turn === 'other') {
+    return (
+      <View style={styles.blocked}>
+        <Text style={styles.blockedTitle}>{tr('已经在另一个标签页里打开了')}</Text>
+        <Text style={styles.blockedText}>{tr('同一时间只能在一个标签页里用。关掉另一个标签页，这里会自动打开。')}</Text>
       </View>
     );
   }
