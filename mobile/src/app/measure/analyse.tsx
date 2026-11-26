@@ -26,7 +26,7 @@ import { returnsToLogger } from '@/domain/marking';
 import { findPoseJumps, poseCoarseFrames, splitAt, startFrom } from '@/domain/poseJump';
 import { framesFromWire } from '@/domain/techniqueRead';
 import { stripTimes } from '@/domain/trim';
-import { best as bestOf, getMetric, type MetricDef } from '@/domain/metrics';
+import { best as bestOf, DROP_LANDING_JUMP, getMetric, type MetricDef } from '@/domain/metrics';
 import { decimal, localized, tr } from '@/i18n';
 import { useAthlete } from '@/state/athlete';
 import { colors, fonts, radius } from '@/theme';
@@ -127,8 +127,8 @@ export default function Analyse() {
   const fpsChoices = detectedFps == null ? FPS_CHOICES : [fileFps, ...FPS_CHOICES.filter((f) => f > fileFps)];
 
   const analysis = useMemo(
-    () => (kind ? analyseJumps(events, { kind, captureFps: fps, boxCm: Number(params.box) || undefined, keep }) : null),
-    [events, kind, fps, params.box, keep],
+    () => (kind ? analyseJumps(events, { kind, captureFps: fps, boxCm: Number(params.box) || undefined, keep, longContact: def?.code === DROP_LANDING_JUMP.code }) : null),
+    [events, kind, fps, params.box, keep, def],
   );
   const trials = useMemo(
     () => (def && analysis ? analysisTrials(def, analysis, { captureFps: fps, context: params, reachCm: current?.standing_reach_cm ?? undefined, offsetCm: offset }) : []),
@@ -505,6 +505,10 @@ function Summary({ def, kind, analysis, fps }: { def: MetricDef; kind: 'jump' | 
     if (s.rsi105 != null) cells.push({ label: '10/5 RSI', value: decimal(s.rsi105, 2), unit: '', main: true });
     if (s.gctCv != null) cells.push({ label: 'GCT-CV', value: decimal(s.gctCv, 1), unit: '%' });
     if (s.driCv != null) cells.push({ label: 'DRI-CV', value: decimal(s.driCv, 1), unit: '%' });
+  } else if (kind === 'drop' && def.code === DROP_LANDING_JUMP.code) {
+    // Scored by height: the contact is long by design.
+    if (s.jhCm) cells.push({ label: tr('最高'), value: cm(s.jhCm.best), unit: 'cm', main: true });
+    if (s.gctS) cells.push({ label: tr('最短触地'), value: ms(s.gctS.best), unit: 'ms' });
   } else if (kind === 'drop') {
     if (s.rsi) cells.push({ label: tr('最好 RSI'), value: decimal(s.rsi.best, 2), unit: '', main: true });
     if (s.gctS) cells.push({ label: tr('最短触地'), value: ms(s.gctS.best), unit: 'ms' });

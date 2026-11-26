@@ -2,7 +2,7 @@ import { dropJumpFromMarks, type DropJumpProblem } from './dropJump';
 import { intervalFromMarks, roundTo, sprintDistance, sprintLimits, type IntervalProblem } from './interval';
 import { measureFromMarks, type MarkProblem } from './jump';
 import { SLAM_FEW_FRAMES, slamFromMarks, type SlamProblem, type SlamSetup } from './slam';
-import type { MetricDef } from './metrics';
+import { DROP_LANDING_JUMP, type MetricDef } from './metrics';
 
 import { decimal, localized, tr } from '@/i18n';
 
@@ -157,6 +157,37 @@ const dropJumpProfile: MarkProfile = {
   },
 };
 
+const LANDING_PROBLEMS: Record<DropJumpProblem, string> = {
+  ...DROP_PROBLEMS,
+  'contact-long': '触地超过 1 秒：落地缓冲后要连贯起跳，中间别停',
+};
+
+/** Drop landing jump: the same three frames as a drop jump, scored by jump height. */
+const dropLandingProfile: MarkProfile = {
+  marks: [
+    { title: '触地帧', hint: '落下后脚刚着地' },
+    { title: '起跳帧', hint: '缓冲后脚尖刚离地' },
+    { title: '落地帧', hint: '脚尖再次触地' },
+  ],
+  phases: ['落下', '缓冲', '腾空', '落地'],
+  measure([contact, takeoff, landing], fps) {
+    const r = dropJumpFromMarks(contact, takeoff, landing, fps);
+    if (!r.ok) return { ok: false, message: LANDING_PROBLEMS[r.problem] };
+    const { contactS, flightS, heightCm, rsi } = r.value;
+    return {
+      ok: true,
+      value: roundTo(heightCm, 1),
+      elapsedS: flightS,
+      cells: [
+        { label: tr('触地'), value: String(Math.round(contactS * 1000)), unit: 'ms' },
+        { label: 'RSImod', value: decimal(rsi, 2), unit: '' },
+        { label: tr('跳高'), value: decimal(heightCm, 1), unit: 'cm', main: true },
+      ],
+      detail: { contact_frame: contact, contact_ms: Math.round(contactS * 1000), rsi_mod: roundTo(rsi, 2) },
+    };
+  },
+};
+
 const SLAM_PROBLEMS: Record<SlamProblem, string> = {
   missing: '标记球过头顶和落地两帧后显示速度',
   order: '落地帧要在过头顶帧之后',
@@ -203,10 +234,12 @@ function slamProfile(setup: SlamSetup | undefined): MarkProfile {
 localized(JUMP_PROBLEMS);
 localized(DROP_PROBLEMS);
 localized(SLAM_PROBLEMS);
-localized([jumpProfile, dropJumpProfile], 'title', 'hint', 'phases');
+localized(LANDING_PROBLEMS);
+localized([jumpProfile, dropJumpProfile, dropLandingProfile], 'title', 'hint', 'phases');
 
 export function markProfile(def: MetricDef, opts: { reachCm?: number; slam?: SlamSetup } = {}): MarkProfile | null {
   if (def.capture.includes('slam')) return slamProfile(opts.slam);
+  if (def.code === DROP_LANDING_JUMP.code) return dropLandingProfile;
   if (def.capture.includes('contact')) return dropJumpProfile;
   if (def.capture.includes('flight')) return def.plusReach ? touchProfile(opts.reachCm) : jumpProfile;
   const metres = sprintDistance(def.code);
