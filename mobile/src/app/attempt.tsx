@@ -6,6 +6,7 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { OUTCOME_COLOR } from '@/components/OutcomeButtons';
 import { Button, Chip, Empty, LoadFailed, Loading } from '@/components/ui';
+import { VIDEO_FILL } from '@/components/videoFill';
 import { deleteDunkAttempt, listDunkAttempts } from '@/db/dunkAttempts';
 import { listTechniqueTakes, techniqueVideoUris, type TechniqueTake } from '@/db/technique';
 import { shortDate, toISODate } from '@/domain/dates';
@@ -121,7 +122,7 @@ export default function AttemptView() {
       {video ? (
         <>
           <View accessibilityLabel={tr('录像')} style={styles.video}>
-            <VideoView player={player} nativeControls contentFit="contain" style={StyleSheet.absoluteFill} />
+            <VideoView player={player} nativeControls contentFit="contain" style={VIDEO_FILL} />
           </View>
           <View style={{ flexDirection: 'row' }}>
             <Chip label={tr('慢放 ¼')} selected={slow} onPress={toggleSlow} />

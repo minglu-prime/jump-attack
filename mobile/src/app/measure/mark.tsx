@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AutoMarker } from '@/components/AutoMarker';
 import { Button, Chip, Empty } from '@/components/ui';
+import { VIDEO_FILL } from '@/components/videoFill';
 import { addTrial, ensureSession } from '@/db/repo';
 import { recalibrateTouches, touchOffsetFor } from '@/db/touch';
 import { parseNumber } from '@/domain/entry';
@@ -17,6 +18,7 @@ import { frameCount, frameToSeconds, markingRates } from '@/domain/jump';
 import { nextClip, queuedCount } from '@/domain/importQueue';
 import { markedTrial, markProfile, returnsToLogger } from '@/domain/marking';
 import { getMetric } from '@/domain/metrics';
+import { parseSlamSetup } from '@/domain/slam';
 import { calibrationProblem } from '@/domain/touch';
 import { decimal, tr } from '@/i18n';
 import { probeFrameRate } from '@/media/frameRate';
@@ -32,11 +34,11 @@ function seekToFrame(player: VideoPlayer, frame: number, fps: number) {
 }
 
 export default function Mark() {
-  const params = useLocalSearchParams<{ metric: string; session: string; uri: string; fps: string; from?: string; load?: string; reps?: string; rom?: string; box?: string; asset?: string; queue?: string; source?: string }>();
+  const params = useLocalSearchParams<{ metric: string; session: string; uri: string; fps: string; from?: string; load?: string; reps?: string; rom?: string; box?: string; asset?: string; queue?: string; source?: string; stature?: string; ball?: string }>();
   const db = useSQLiteContext();
   const { current } = useAthlete();
   const def = getMetric(params.metric);
-  const profile = def ? markProfile(def, { reachCm: current?.standing_reach_cm ?? undefined }) : null;
+  const profile = def ? markProfile(def, { reachCm: current?.standing_reach_cm ?? undefined, slam: parseSlamSetup(params) ?? undefined }) : null;
   const player = useVideoPlayer(params.uri, (p) => {
     p.muted = true;
     p.pause();
@@ -160,7 +162,7 @@ export default function Mark() {
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <View style={styles.video}>
-          <VideoView player={player} nativeControls={false} contentFit="contain" style={StyleSheet.absoluteFill} />
+          <VideoView player={player} nativeControls={false} contentFit="contain" style={VIDEO_FILL} />
           <View style={styles.frameBadge}>
             <Text style={styles.frameText}>#{frame}</Text>
             <Text style={styles.frameTime}>{Math.round((frame / fps) * 1000)} ms</Text>
@@ -245,6 +247,7 @@ export default function Mark() {
             <Text style={styles.problem}>{result.message}</Text>
           )}
         </View>
+        {result.ok && result.note ? <Text style={styles.slowMoHint}>{result.note}</Text> : null}
 
         {isTouch && result.ok && (
           <View style={styles.calibrate}>
@@ -268,13 +271,13 @@ export default function Mark() {
       </ScrollView>
       <View style={styles.footer}>
         {queued > 0 && <Text style={styles.savedNote}>{tr('还有 {queued} 段视频，保存后接着看下一段', { queued })}</Text>}
-        {saved > 0 && <Text style={styles.savedNote}>{tr('这段视频已存 {saved} 次，可以接着往后标下一跳', { saved })}</Text>}
+        {saved > 0 && <Text style={styles.savedNote}>{profile.again ? profile.again.saved(saved) : tr('这段视频已存 {saved} 次，可以接着往后标下一跳', { saved })}</Text>}
         {saved > 0 && !result.ok ? (
           <Button label={nextRoute ? tr('看下一段') : tr('看结果')} onPress={goResult} />
         ) : (
           <Button label={tr('保存这一次')} onPress={() => save()} disabled={!result.ok || touchProblem != null} busy={saving} />
         )}
-        {!logger && result.ok && <Button label={tr('保存，接着标这段视频的下一跳')} variant="ghost" onPress={() => save(true)} disabled={saving || touchProblem != null} />}
+        {!logger && result.ok && <Button label={profile.again?.save ?? tr('保存，接着标这段视频的下一跳')} variant="ghost" onPress={() => save(true)} disabled={saving || touchProblem != null} />}
         {nextRoute && saved === 0 && <Button label={tr('跳过这段，看下一段')} variant="ghost" onPress={() => router.replace(nextRoute)} disabled={saving} />}
       </View>
     </SafeAreaView>

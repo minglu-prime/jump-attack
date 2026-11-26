@@ -13,6 +13,7 @@ import { PulseProgress } from '@/components/PulseProgress';
 import { TrendChart } from '@/components/TrendChart';
 import { TrimBar } from '@/components/TrimBar';
 import { Button, Chip, Digits, Empty } from '@/components/ui';
+import { VIDEO_FILL } from '@/components/videoFill';
 import { analysisHistory, saveAnalysedTrials } from '@/db/analysis';
 import { touchOffsetFor } from '@/db/touch';
 import { realChange, type RealChange } from '@/domain/agreement';
@@ -352,7 +353,7 @@ export default function Analyse() {
     <SafeAreaView style={styles.screen} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.video} onLayout={(e: LayoutChangeEvent) => setView({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
-          <VideoView player={player} nativeControls={false} contentFit="contain" style={StyleSheet.absoluteFill} />
+          <VideoView player={player} nativeControls={false} contentFit="contain" style={VIDEO_FILL} />
           {/* The page that reads frames: hidden until it runs, then it shows each frame it reads and the strip it reads. */}
           <View style={[StyleSheet.absoluteFill, { opacity: running ? 1 : 0.01 }]} pointerEvents="none">
             <FrameReader ref={reader} uri={params.uri} fileFps={fileFps} onReady={setClip} onError={() => setPhase((p) => (p.name === 'done' ? p : { name: 'failed', problem: 'error' }))} style={StyleSheet.absoluteFill} />

@@ -12,10 +12,11 @@ export type Category = 'jump' | 'conditioning' | 'speed' | 'vbt' | 'mobility' | 
  * - `contact`: touch-down, take-off and landing frames of a drop jump (reactive strength index).
  * - `rebound`: a set of repeated jumps analysed from video, each contact the gap between one landing and the next take-off.
  * - `interval`: start and finish frames in a video (sprint time).
+ * - `slam`: the frames a med ball passes head height and hits the floor (slam speed, with the athlete's stature and the ball's size).
  * - `manual`: typed in, from a stopwatch, timing gates, a VBT device or app, or Apple Health.
  * VBT lifts are typed in or tracked from video on their own screen, not marked frame by frame.
  */
-export type CaptureKind = 'flight' | 'contact' | 'rebound' | 'interval' | 'manual';
+export type CaptureKind = 'flight' | 'contact' | 'rebound' | 'interval' | 'slam' | 'manual';
 
 export type MetricDef = {
   code: string;
@@ -61,7 +62,7 @@ export const CATEGORIES: CategoryDef[] = [
   { key: 'jump', name: '跳跃测试', color: '#2340C8', tile: '#E1E6FA', subtitle: 'CMJ · SJ · DJ · 助跑摸高', icon: 'jump', href: '/jumps' },
   { key: 'conditioning', name: '体能耐力', color: '#B92F1C', tile: '#F6E0DB', subtitle: 'VO2max · RSA 反复冲刺', icon: 'conditioning', href: '/conditioning' },
   { key: 'speed', name: '速度训练', color: '#0B6F6E', tile: '#DCEEEC', subtitle: '10 m · 30 m · 50 m · 100 m 冲刺', icon: 'speed', href: '/speed' },
-  { key: 'vbt', name: 'VBT 训练', color: '#D9541E', tile: '#F8E3D8', subtitle: '深蹲 · 高翻 · 高拉 · 深蹲跳', icon: 'vbt', href: '/vbt' },
+  { key: 'vbt', name: 'VBT 训练', color: '#D9541E', tile: '#F8E3D8', subtitle: '深蹲 · 高翻 · 高拉 · 深蹲跳 · 药球下砸', icon: 'vbt', href: '/vbt' },
   { key: 'mobility', name: '灵活度', color: '#6A46BE', tile: '#ECE5F7', subtitle: '踝 · 髋 · 腘绳肌 · 胸椎 · 肩', icon: 'mobility', href: '/mobility' },
   { key: 'recovery', name: '恢复', color: '#1A6E3D', tile: '#DFEEE4', subtitle: 'HRV · 静息心率 · 睡眠 · 呼吸频率', icon: 'recovery', href: '/recovery' },
 ];
@@ -250,6 +251,22 @@ export const VBT_LIFTS: MetricDef[] = [
   { code: 'vbt_squat_jump', name: '深蹲跳', category: 'vbt', unit: 'm/s', decimals: 2, capture: ['manual'], range: [0.05, 4] },
 ];
 
+/**
+ * Med-ball slam: each rep is one trial, the ball's mean speed from head height to the floor (domain/slam.ts), the
+ * ball's mass in `trial.load_kg`. A session's result is its fastest rep.
+ */
+export const MED_BALL_SLAM: MetricDef & { short: string } = {
+  code: 'med_ball_slam',
+  name: '药球下砸',
+  short: '下砸',
+  category: 'vbt',
+  unit: 'm/s',
+  decimals: 1,
+  use: '球从头顶高度砸到地面的平均速度，看上肢和躯干的爆发力',
+  capture: ['slam'],
+  range: [2, 25],
+};
+
 /** A back-squat 1RM actually lifted: it overrides velocity estimates for working weights and the strength ratio. */
 export const SQUAT_1RM: MetricDef = { code: 'squat_1rm', name: '深蹲 1RM（实测）', short: '深蹲 1RM', category: 'vbt', unit: 'kg', decimals: 1, capture: ['manual'], range: [20, 400] };
 
@@ -309,6 +326,7 @@ export const METRICS: MetricDef[] = [
   ...CONDITIONING_TESTS,
   ...SPEED_TESTS,
   ...VBT_LIFTS,
+  MED_BALL_SLAM,
   SQUAT_1RM,
   ...MOBILITY_TESTS,
   ...RECOVERY_METRICS,

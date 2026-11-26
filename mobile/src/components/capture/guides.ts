@@ -126,12 +126,30 @@ const LIFT: CaptureGuide = {
   maxSeconds: 60,
 };
 
+const SLAM: CaptureGuide = {
+  ...SLOW_MO_CHOICE,
+  steps: [
+    SLOW_MO_SETUP,
+    { title: '侧面放稳，拍全身', text: '三脚架或地面放稳，别手持。站到 3 米左右，竖着拍，举过头的球和落地点都要在画面里，头顶上方留出一个球的空。' },
+    { title: '穿和球颜色不一样的衣服', text: '黑球配浅色上衣，逐帧时才看得清球在哪。' },
+    { title: '用「慢动作」拍，一段拍一组', text: '开拍后再举球，砸完一组再停。一组里每一次都能分别标。' },
+    { title: '导入逐帧标记', text: '每一次标两帧：球心和头顶一样高的一帧，球刚碰到地面的一帧。' },
+  ],
+  checks: ['手机放稳，侧对运动员', '举过头的球和落地点都在画面里'],
+  feetOverlay: false,
+  recordingHint: '砸完这一组后，点击停止',
+  doneHint: '下一步逐帧找到球过头顶和落地。',
+  tips: '1. 手机放在侧面 3 米左右，竖着拍全身。\n2. 举过头的球和落地点都要在画面里。\n3. 优先用 240 fps：从头顶到落地只有约 0.15 秒，30 fps 只有 4–5 帧。',
+  maxSeconds: 60,
+};
+
 // Shown in the current language (i18n).
-localized([JUMP, DROP_JUMP, REPEATED_JUMP, APPROACH_TOUCH, SPRINT, LIFT_SETUP, LIFT], 'film', 'import', 'stepsTitle', 'title', 'text', 'checks', 'recordingHint', 'doneHint', 'tips');
+localized([JUMP, DROP_JUMP, REPEATED_JUMP, APPROACH_TOUCH, SPRINT, LIFT_SETUP, LIFT, SLAM], 'film', 'import', 'stepsTitle', 'title', 'text', 'checks', 'recordingHint', 'doneHint', 'tips');
 
 export function captureGuide(category: Category, code?: string): CaptureGuide {
   if (code === 'dj_rsi') return DROP_JUMP;
   if (code === 'rj_rsi') return REPEATED_JUMP;
   if (code === 'approach_touch') return APPROACH_TOUCH;
+  if (code === 'med_ball_slam') return SLAM;
   return category === 'speed' ? SPRINT : category === 'vbt' ? LIFT : JUMP;
 }

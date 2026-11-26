@@ -7,6 +7,7 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { DemoFigure } from '@/components/DemoFigure';
 import { Icon } from '@/components/Icon';
 import { Button, Card, Empty } from '@/components/ui';
+import { VIDEO_FILL } from '@/components/videoFill';
 import { demoClipProblem, demoFor } from '@/domain/demos';
 import { exerciseIn, TEMPLATES } from '@/domain/templates';
 import { tr } from '@/i18n';
@@ -110,7 +111,7 @@ function OwnClip({ uri }: { uri: string }) {
   });
   return (
     <View style={styles.video}>
-      <VideoView player={player} contentFit="contain" nativeControls style={StyleSheet.absoluteFill} />
+      <VideoView player={player} contentFit="contain" nativeControls style={VIDEO_FILL} />
     </View>
   );
 }

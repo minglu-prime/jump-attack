@@ -1,6 +1,7 @@
 import { dropJumpFromMarks, type DropJumpProblem } from './dropJump';
 import { intervalFromMarks, roundTo, sprintDistance, sprintLimits, type IntervalProblem } from './interval';
 import { measureFromMarks, type MarkProblem } from './jump';
+import { SLAM_FEW_FRAMES, slamFromMarks, type SlamProblem, type SlamSetup } from './slam';
 import type { MetricDef } from './metrics';
 
 import { decimal, localized, tr } from '@/i18n';
@@ -15,6 +16,8 @@ export type MarkOutcome =
       cells: { label: string; value: string; unit: string; main?: boolean }[];
       /** Extras stored with the trial, e.g. a drop jump's contact time. */
       detail?: Record<string, unknown>;
+      /** A caution shown under the result, e.g. too few frames to trust it closely. */
+      note?: string;
     }
   | { ok: false; message: string };
 
@@ -24,6 +27,8 @@ export type MarkOutcome =
  */
 export type MarkProfile = {
   marks: Mark[];
+  /** Saving and going on to the next attempt in the same clip, and the note once some are saved. Defaults to jumps. */
+  again?: { save: string; saved: (n: number) => string };
   /** Shown over the video: before the first mark, between each pair of marks, after the last. One more than `marks`. */
   phases: string[];
   measure: (marks: (number | null)[], fps: number) => MarkOutcome;
@@ -152,6 +157,44 @@ const dropJumpProfile: MarkProfile = {
   },
 };
 
+const SLAM_PROBLEMS: Record<SlamProblem, string> = {
+  missing: '标记球过头顶和落地两帧后显示速度',
+  order: '落地帧要在过头顶帧之后',
+  'too-fast': '速度超过 25 m/s，检查是否标错帧；慢动作视频要把拍摄帧率选成 240',
+  'too-slow': '速度不到 2 m/s，检查是否标错帧',
+};
+
+function slamProfile(setup: SlamSetup | undefined): MarkProfile {
+  return {
+    marks: [
+      { title: tr('过头顶帧'), hint: tr('球心和头顶一样高') },
+      { title: tr('落地帧'), hint: tr('球刚碰到地面') },
+    ],
+    phases: [tr('举球'), tr('下砸'), tr('落地')],
+    again: { save: tr('保存，接着标这段视频的下一次'), saved: (saved) => tr('这段视频已存 {saved} 次，可以接着往后标下一次', { saved }) },
+    measure([head, floor], fps) {
+      if (!setup) return { ok: false, message: tr('先在药球下砸页填身高和球的直径') };
+      const r = slamFromMarks(head, floor, fps, setup);
+      if (!r.ok) return { ok: false, message: SLAM_PROBLEMS[r.problem] };
+      const { seconds, dropM, speed, frames } = r.value;
+      return {
+        ok: true,
+        value: roundTo(speed, 1),
+        elapsedS: seconds,
+        cells: [
+          { label: tr('用时'), value: String(Math.round(seconds * 1000)), unit: 'ms' },
+          { label: tr('距离'), value: decimal(dropM, 2), unit: 'm' },
+          { label: tr('速度'), value: decimal(speed, 1), unit: 'm/s', main: true },
+        ],
+        detail: { stature_cm: setup.statureCm, ball_cm: setup.ballCm, drop_m: roundTo(dropM, 3) },
+        ...(frames < SLAM_FEW_FRAMES
+          ? { note: tr('两帧只隔 {frames} 帧，差一帧速度就差 {pct}% 左右。用 240 fps 慢动作拍会准得多。', { frames, pct: Math.round(100 / frames) }) }
+          : {}),
+      };
+    },
+  };
+}
+
 /**
  * The marking profile for a metric recorded from video, or null when it can't be marked. Lifts aren't marked by
  * hand: their videos are tracked automatically (app/vbt/track).
@@ -159,9 +202,11 @@ const dropJumpProfile: MarkProfile = {
 // Shown in the current language (i18n).
 localized(JUMP_PROBLEMS);
 localized(DROP_PROBLEMS);
+localized(SLAM_PROBLEMS);
 localized([jumpProfile, dropJumpProfile], 'title', 'hint', 'phases');
 
-export function markProfile(def: MetricDef, opts: { reachCm?: number } = {}): MarkProfile | null {
+export function markProfile(def: MetricDef, opts: { reachCm?: number; slam?: SlamSetup } = {}): MarkProfile | null {
+  if (def.capture.includes('slam')) return slamProfile(opts.slam);
   if (def.capture.includes('contact')) return dropJumpProfile;
   if (def.capture.includes('flight')) return def.plusReach ? touchProfile(opts.reachCm) : jumpProfile;
   const metres = sprintDistance(def.code);
