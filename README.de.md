@@ -77,7 +77,7 @@ GitHub Actions aktualisiert Web-App und Cloud-Build, sobald Code in `main` gemer
 <br>
 
 1. **Expo Go** aus dem App Store aufs iPhone laden, [Node.js](https://nodejs.org) LTS auf den Computer.
-2. [main.zip](https://github.com/Sam18069272581/jump-attack/archive/refs/heads/main.zip) herunterladen und entpacken (vor einem erneuten Download den alten Ordner `jump-attack-main` löschen).
+2. [main.zip](https://github.com/minglu-prime/jump-attack/archive/refs/heads/main.zip) herunterladen und entpacken (vor einem erneuten Download den alten Ordner `jump-attack-main` löschen).
 3. Im Terminal nach `jump-attack-main/mobile` wechseln, `npm install` und dann `npm start` ausführen.
 4. Handy und Computer ins selbe WLAN bringen und den QR-Code im Terminal mit der Kamera scannen.
 

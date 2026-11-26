@@ -75,7 +75,7 @@ flowchart LR
 <br>
 
 1. iPhone 从 App Store 装 **Expo Go**，电脑装 [Node.js](https://nodejs.org) LTS。
-2. 下载 [main.zip](https://github.com/Sam18069272581/jump-attack/archive/refs/heads/main.zip) 并解压（重新下载前先删掉旧的 `jump-attack-main` 文件夹）。
+2. 下载 [main.zip](https://github.com/minglu-prime/jump-attack/archive/refs/heads/main.zip) 并解压（重新下载前先删掉旧的 `jump-attack-main` 文件夹）。
 3. 终端进入 `jump-attack-main/mobile`，运行 `npm install`，再运行 `npm start`。
 4. 手机和电脑连同一个 Wi-Fi，用相机扫终端里的二维码。
 

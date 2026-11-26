@@ -15,7 +15,7 @@
 ## 怎么运行
 
 1. iPhone 从 App Store 装 **Expo Go**；电脑装 [Node.js](https://nodejs.org) LTS。
-2. 下载 https://github.com/Sam18069272581/jump-attack/archive/refs/heads/main.zip 并解压（重新下载前先删掉旧的 `jump-attack-main` 文件夹）。
+2. 下载 https://github.com/minglu-prime/jump-attack/archive/refs/heads/main.zip 并解压（重新下载前先删掉旧的 `jump-attack-main` 文件夹）。
 3. 终端进入 `mobile` 文件夹，运行：
 
    ```sh
