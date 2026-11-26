@@ -46,6 +46,16 @@ it('only loads files that ship with the page', () => {
   }
 });
 
+it('keeps every highlighted phrase short enough to fit a phone', () => {
+  // <em> is white-space: nowrap (style.css), so a long phrase cannot wrap and pushes the page wider than a 375 px phone.
+  // Width counts a CJK character as 2. Fix a failure by shortening the phrase inside <em>, not by allowing it to wrap.
+  const width = (s: string) => [...s.replace(/<[^>]+>/g, '')].reduce((n, c) => n + (/[　-鿿＀-￯]/.test(c) ? 2 : 1), 0);
+  const phrases = [...html.matchAll(/<em[^>]*>(.*?)<\/em>/g)].map((m) => `zh: ${m[1]}`);
+  for (const [key, text] of Object.entries(en)) for (const m of text.matchAll(/<em[^>]*>(.*?)<\/em>/g)) phrases.push(`en ${key}: ${m[1]}`);
+  expect(phrases.length).toBeGreaterThan(10);
+  expect(phrases.filter((p) => width(p.slice(p.indexOf(': ') + 2)) > 12)).toEqual([]);
+});
+
 it('ships the promo film and its poster in both languages', () => {
   // The <video> swaps src and poster with the language, so the Chinese files are in the page and the English ones in i18n.js.
   const tag = html.match(/<video[^>]*>/)?.[0] ?? '';

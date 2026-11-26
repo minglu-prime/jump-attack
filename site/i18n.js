@@ -23,7 +23,7 @@ var en = {
   'tester.reach': 'Running reach',
   'tester.drag': 'Drag to set your reach',
 
-  'f.title': '47 seconds to find <em class="blue">what is holding you back</em>.',
+  'f.title': '47 seconds to find <em class="blue">the blocker</em>.',
   'f.lede': 'The same missing dunk can come from strength, elasticity or takeoff technique. The film follows the author chasing 320 cm through the flowchart, one check at a time, with a source for every claim.',
   'f.note': 'The hand-drawn athlete is traced frame by frame from the pose in the author’s own slow-motion clips; jump height and contact time are computed from those frames. Numbers marked “Example” or “Demo account” are demo data. The music is an original track generated in code.',
   'film.src': 'assets/promo-en.mp4',
