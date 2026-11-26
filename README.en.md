@@ -77,7 +77,7 @@ GitHub Actions updates the web app and the cloud build whenever code is merged i
 <br>
 
 1. Install **Expo Go** from the App Store on iPhone, and [Node.js](https://nodejs.org) LTS on your computer.
-2. Download [main.zip](https://github.com/Sam18069272581/jump-attack/archive/refs/heads/main.zip) and unzip it (delete the old `jump-attack-main` folder before downloading again).
+2. Download [main.zip](https://github.com/minglu-prime/jump-attack/archive/refs/heads/main.zip) and unzip it (delete the old `jump-attack-main` folder before downloading again).
 3. In a terminal, go to `jump-attack-main/mobile`, run `npm install`, then `npm start`.
 4. Put phone and computer on the same Wi-Fi and scan the QR code in the terminal with the camera.
 

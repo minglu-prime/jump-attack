@@ -4,7 +4,7 @@ import { isJump, type Prescription } from './plan';
 import { tr } from '@/i18n';
 
 /**
- * Training load the way trackload (github.com/Sam18069272581/trackload) tracks it: a daily load, an acute and a
+ * Training load the way trackload (github.com/minglu-prime/trackload) tracks it: a daily load, an acute and a
  * chronic exponentially weighted average, and their ratio (ACWR). Two loads use it: session RPE × minutes for
  * training as a whole, and jump count for the knees.
  *

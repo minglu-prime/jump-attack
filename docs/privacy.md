@@ -33,7 +33,7 @@ Jump Attack（下称「本 App」）是一款弹跳与运动表现测试训练�
 
 ## 联系我们
 
-对本政策有任何疑问，请在 https://github.com/Sam18069272581/jump-attack/issues 提交问题。
+对本政策有任何疑问，请在 https://github.com/minglu-prime/jump-attack/issues 提交问题。
 
 ## 政策变更
 
