@@ -23,7 +23,7 @@ var en = {
   'tester.reach': 'Running reach',
   'tester.drag': 'Drag to set your reach',
 
-  'f.title': '47 seconds to find <em class="blue">what is holding you back</em>.',
+  'f.title': '47 seconds to find <em class="blue">the blocker</em>.',
   'f.lede': 'The same missing dunk can come from strength, elasticity or takeoff technique. The film follows the author chasing 320 cm through the flowchart, one check at a time, with a source for every claim.',
   'f.note': 'The hand-drawn athlete is traced frame by frame from the pose in the author’s own slow-motion clips; jump height and contact time are computed from those frames. Numbers marked “Example” or “Demo account” are demo data. The music is an original track generated in code.',
   'film.src': 'assets/promo-en.mp4',
@@ -121,8 +121,7 @@ var en = {
   'b.lede': 'Built for the author first, then for the team once it measures well. Three rules decide every trade-off: accuracy over feature count, logging must be effortless, data must never be lost.',
   'b.1': 'The author’s running reach today',
   'b.2': 'Dunk line: rim 305 + 15 above it',
-  'b.3.num': 'Dec 1',
-  'b.3': 'Target: a clean dunk, no defender',
+  'b.3': 'To go: a clean dunk, no defender',
   'b.4': 'Analytics or tracking scripts',
   'b.fine': 'Health and training data is stored on the phone first. It only syncs, as a whole, after you sign in to your own cloud account.',
 
@@ -145,7 +144,7 @@ var ui = {
   zh: {
     gapBelow: '离扣篮线还差',
     gapOver: '已经过线',
-    author: '作者现在就在这里：318 cm，目标 12 月 1 日前扣进第一个篮。',
+    author: '作者现在就在这里：318 cm，目标是无对抗扣进第一个篮。',
     below: '再高 {d} cm 就能扣。App 会告诉你这几厘米该从力量还是反应里找。',
     over: '高出扣篮线 {d} cm，去篮下试扣，记下扣进、碰框还是没够到。',
     copied: '已复制',
@@ -154,7 +153,7 @@ var ui = {
   en: {
     gapBelow: 'To the dunk line',
     gapOver: 'Above the line',
-    author: 'This is where the author is now: 318 cm, aiming to dunk before December 1.',
+    author: 'This is where the author is now: 318 cm, chasing a first dunk with no defender.',
     below: '{d} cm more and you can dunk. The app tells you whether to find them in strength or reactivity.',
     over: '{d} cm above the dunk line. Go try it, and log whether you made it, hit the rim or came up short.',
     copied: 'Copied',
